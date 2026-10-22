@@ -1,0 +1,413 @@
+{
+  "$ref": "#/definitions/OnboardingPackage",
+  "definitions": {
+    "OnboardingPackage": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "caseId": {
+          "type": "string"
+        },
+        "merchantId": {
+          "type": "string"
+        },
+        "acquirerCode": {
+          "type": "string"
+        },
+        "generatedAt": {
+          "type": "string"
+        },
+        "merchant": {
+          "type": "object",
+          "properties": {
+            "legalName": {
+              "type": "string"
+            },
+            "tradeName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "entityType": {
+              "type": "string",
+              "enum": [
+                "sole_establishment",
+                "llc",
+                "free_zone",
+                "mainland"
+              ]
+            },
+            "trn": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "registeredAddress": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "website": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "incorporationDate": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "legalName",
+            "tradeName",
+            "entityType",
+            "trn",
+            "registeredAddress",
+            "website",
+            "incorporationDate"
+          ],
+          "additionalProperties": false
+        },
+        "licence": {
+          "type": "object",
+          "properties": {
+            "number": {
+              "type": "string"
+            },
+            "authority": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expiry": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "number",
+            "authority",
+            "expiry"
+          ],
+          "additionalProperties": false
+        },
+        "directorsAndSignatories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "fullName": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "DIRECTOR",
+                  "SIGNATORY",
+                  "SHAREHOLDER",
+                  "UBO"
+                ]
+              },
+              "nationality": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dob": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "idType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "idNumberMasked": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "idExpiry": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ownershipPct": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "isPep": {
+                "type": "boolean"
+              },
+              "screeningStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "fullName",
+              "role",
+              "nationality",
+              "dob",
+              "idType",
+              "idNumberMasked",
+              "idExpiry",
+              "ownershipPct",
+              "isPep",
+              "screeningStatus"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "ubos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OnboardingPackage/properties/directorsAndSignatories/items"
+          }
+        },
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "docType": {
+                "type": "string"
+              },
+              "fileName": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "issuedOn": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "expiresOn": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "verifiedStatus": {
+                "type": "string"
+              },
+              "downloadUrl": {
+                "type": "string"
+              },
+              "downloadUrlExpiresAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "docType",
+              "fileName",
+              "sha256",
+              "issuedOn",
+              "expiresOn",
+              "verifiedStatus",
+              "downloadUrl",
+              "downloadUrlExpiresAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "risk": {
+          "type": "object",
+          "properties": {
+            "rating": {
+              "type": "string",
+              "enum": [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "REFER"
+              ]
+            },
+            "score": {
+              "type": "number"
+            },
+            "reasonCodes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "screeningIsMock": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "rating",
+            "score",
+            "reasonCodes",
+            "screeningIsMock"
+          ],
+          "additionalProperties": false
+        },
+        "activity": {
+          "type": "object",
+          "properties": {
+            "mcc": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expectedMonthlyVolume": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "expectedAvgTicket": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "mcc",
+            "expectedMonthlyVolume",
+            "expectedAvgTicket"
+          ],
+          "additionalProperties": false
+        },
+        "decision": {
+          "type": "object",
+          "properties": {
+            "decision": {
+              "type": "string",
+              "const": "APPROVED"
+            },
+            "decidedBy": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "decidedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "decision",
+            "decidedBy",
+            "decidedAt"
+          ],
+          "additionalProperties": false
+        },
+        "acquirerPack": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "type": "string"
+                  },
+                  "downloadUrl": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "sha256",
+                  "downloadUrl"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "submission": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string"
+                    },
+                    "reference": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isMock": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "reference",
+                    "isMock"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "files",
+            "submission"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "caseId",
+        "merchantId",
+        "acquirerCode",
+        "generatedAt",
+        "merchant",
+        "licence",
+        "directorsAndSignatories",
+        "ubos",
+        "documents",
+        "risk",
+        "activity",
+        "decision",
+        "acquirerPack"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

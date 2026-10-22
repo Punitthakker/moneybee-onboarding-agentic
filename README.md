@@ -1,0 +1,77 @@
+# MoneyBee Onboard
+
+Agentic merchant onboarding for UAE acquirers. Drop a merchant's documents in; agents classify, extract, cross-check, resolve beneficial owners, screen, score and build the acquirer pack. A human underwriter reviews and approves. On completion the record is written to SQL Server in one transaction, a secure single-use onboarding token is minted, and a signed webhook carries the token to your payment / onboarding notification flow.
+
+> The agents recommend and prepare. They never approve or decline. Screening is a **MOCK** until a real provider is plugged in (see `docs/MOCKS.md`).
+
+## Run it on Docker (recommended)
+
+Requirements: Docker Desktop (with Rosetta enabled on Apple Silicon for SQL Server), Node 20+ (only for the setup script), about 6 GB free RAM for Docker.
+
+```bash
+git clone https://github.com/Punitthakker/moneybee-onboarding-agentic.git
+cd moneybee-onboarding-agentic
+node scripts/setup.mjs            # creates .env with fresh secrets and prints the logins
+docker compose up -d --build      # first build takes a few minutes; SQL Server needs ~60s to start
+```
+
+Open **http://localhost:8080** and sign in with the admin or demo login printed by the setup script.
+
+| Service | URL |
+|---|---|
+| App | http://localhost:8080 |
+| API | http://localhost:4000 (`/health`, `/ready`) |
+| MinIO console | http://localhost:9001 |
+| SQL Server | localhost:1433 (user `sa`, password `MSSQL_SA_PASSWORD` from `.env`) |
+| Webhook sink logs | `docker compose logs -f webhook-sink` |
+
+Add your `ANTHROPIC_API_KEY` to `.env` and run `docker compose up -d api` to switch from the MOCK fixture parser to live Claude.
+
+### Try it
+1. `npm install && npm run fixtures` generates ten synthetic merchants in `fixtures/merchants` (or use the zips you make from them).
+2. New case, drop a fixture folder (for example `05-layered-ubo`), choose an acquirer, click **Create case and run agents**.
+3. Watch the agent timeline. When the case reaches AWAITING_REVIEW, check flagged fields, open Ownership, then Risk and decision.
+4. Approve with notes (HIGH / REFER cases need a second reviewer: sign in as `second@moneybee.local`).
+5. Output, then **Complete and mint token**. Copy the claim URL (shown once), then:
+```bash
+curl -s http://localhost:8080/api/v1/onboarding/<token>/status
+curl -s -X POST http://localhost:8080/api/v1/onboarding/<token>/claim   # works once
+```
+
+## Develop
+```bash
+npm install
+npm run dev        # starts infra in Docker, API on :4000 (watch), UI on :5173
+npm test           # Vitest + Supertest (no infrastructure needed)
+npm run eval       # pipeline accuracy on the fixtures; fails below the floors
+npm run e2e        # Playwright happy path (needs the stack running)
+npm run typecheck
+```
+
+## API (`/api/v1`)
+```
+POST   /cases                              create a case
+POST   /cases/:id/documents                upload files (multipart field "files") or attach an email (field "email")
+POST   /cases/:id/run                      start or resume the agent pipeline
+GET    /cases/:id                          full case state, fields, confidence, traces
+PATCH  /cases/:id/fields                   reviewer edit or confirm {path, value | confirm, reason}
+POST   /cases/:id/review                   {decision: approve|reject|request_info, notes}
+POST   /cases/:id/complete                 finalise, write to SQL Server, mint token
+GET    /onboarding/:token/status           read-only status by token
+POST   /onboarding/:token/claim            single use: returns the onboarding package
+POST   /tokens/:id/revoke                  revoke a token
+GET    /cases/:id/events                   SSE agent timeline
+```
+The onboarding package JSON Schema is in `packages/shared/onboarding-package.schema.json`; the webhook schema is next to it.
+
+### Webhook
+`POST ONBOARDING_WEBHOOK_URL` with headers `X-MoneyBee-Signature: sha256=<hex>` (HMAC-SHA256 of `"<timestamp>.<raw body>"` with `ONBOARDING_WEBHOOK_SECRET`), `X-MoneyBee-Timestamp` (unix seconds; reject if older than 5 minutes) and `X-MoneyBee-Delivery`. Body:
+```json
+{ "event": "onboarding.completed", "caseId": "...", "merchantId": "...", "token": "mb_onb_...", "tokenExpiresAt": "...", "claimUrl": "https://.../api/v1/onboarding/<token>/claim" }
+```
+`scripts/webhook-sink.mjs` is a working receiver to copy from.
+
+## Layout
+`apps/web` React UI · `apps/api` API and agents · `packages/shared` schemas · `db/migrations` SQL Server DDL · `policies` base policy and example acquirer overrides · `fixtures` synthetic merchants · `docs` plan, decisions, mocks, security, threat model.
+
+All fixture data is synthetic. Policy values and example acquirers are illustrative and must be set by compliance.

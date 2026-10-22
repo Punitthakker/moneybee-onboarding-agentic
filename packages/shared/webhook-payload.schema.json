@@ -1,0 +1,39 @@
+{
+  "$ref": "#/definitions/WebhookPayload",
+  "definitions": {
+    "WebhookPayload": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "type": "string",
+          "const": "onboarding.completed"
+        },
+        "caseId": {
+          "type": "string"
+        },
+        "merchantId": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "tokenExpiresAt": {
+          "type": "string"
+        },
+        "claimUrl": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "event",
+        "caseId",
+        "merchantId",
+        "token",
+        "tokenExpiresAt",
+        "claimUrl"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

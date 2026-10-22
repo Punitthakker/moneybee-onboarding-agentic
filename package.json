@@ -3,8 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "description": "MoneyBee Onboard - agentic merchant onboarding for UAE acquirers",
-  "workspaces": ["apps/*", "packages/*"],
-  "engines": { "node": ">=20" },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "npm run build -w @moneybee/api && npm run build -w @moneybee/web",
@@ -13,14 +18,17 @@
     "eval": "npm run eval -w @moneybee/api",
     "fixtures": "tsx fixtures/generate.ts",
     "e2e": "playwright test",
-    "schema": "tsx packages/shared/scripts/gen-schema.ts"
+    "schema": "tsx packages/shared/scripts/gen-schema.ts",
+    "setup": "node scripts/setup.mjs",
+    "up": "node scripts/setup.mjs && docker compose up -d --build",
+    "down": "docker compose down"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
+    "@types/node": "^20.16.0",
+    "pdf-lib": "^1.17.1",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
-    "vitest": "^2.1.0",
-    "pdf-lib": "^1.17.1",
-    "@types/node": "^20.16.0"
+    "vitest": "^2.1.0"
   }
 }
