@@ -1,0 +1,38 @@
+{
+  "entityType": "free_zone",
+  "description": "Clean free zone FZCO, single shareholder",
+  "classification": {
+    "trade_licence": 1,
+    "certificate_of_incorporation": 1,
+    "moa_aoa": 1,
+    "register_of_shareholders": 1,
+    "register_of_directors": 1,
+    "emirates_id": 1,
+    "passport": 1,
+    "lease_ejari": 1,
+    "bank_letter": 1,
+    "authorised_signatory_letter": 1,
+    "ubo_declaration": 1,
+    "website_description": 1,
+    "vat_certificate": 1
+  },
+  "fields": {
+    "company.legalName": "Nimbus Pay Labs FZCO",
+    "licence.number": "SFZ-300003",
+    "company.trn": "100123456700003",
+    "banking.iban": "AE070331234567890123456",
+    "activity.mcc": "5812",
+    "activity.expectedMonthlyVolume": 300000,
+    "activity.expectedAvgTicket": 150
+  },
+  "ubos": [
+    "Salma Examplawi"
+  ],
+  "rating": "LOW",
+  "mustHaveFindings": [],
+  "mustNotHaveFindings": [
+    "MISSING_DOC"
+  ],
+  "injectionFlagged": false,
+  "screeningHit": false
+}

@@ -1,0 +1,41 @@
+{
+  "entityType": "llc",
+  "description": "Two-layer corporate shareholder chain: P1 holds 28 percent and P4 holds 30 percent effectively; P2 and P3 hold 21 percent each (below threshold)",
+  "classification": {
+    "trade_licence": 1,
+    "moa_aoa": 1,
+    "register_of_shareholders": 1,
+    "corporate_shareholder_docs": 2,
+    "emirates_id": 4,
+    "passport": 1,
+    "lease_ejari": 1,
+    "bank_letter": 1,
+    "authorised_signatory_letter": 1,
+    "ubo_declaration": 1,
+    "website_description": 1,
+    "vat_certificate": 1
+  },
+  "fields": {
+    "company.legalName": "Cedar Layers Trading LLC",
+    "licence.number": "SYN-500005",
+    "company.trn": "100123456700003",
+    "banking.iban": "AE070331234567890123456",
+    "activity.mcc": "5812",
+    "activity.expectedMonthlyVolume": 300000,
+    "activity.expectedAvgTicket": 150
+  },
+  "ubos": [
+    "Dalia Directi",
+    "Tariq Layeri"
+  ],
+  "rating": "LOW",
+  "mustHaveFindings": [],
+  "mustNotHaveFindings": [
+    "MISSING_DOC",
+    "UBO_UNTRACED",
+    "NAME_MISMATCH",
+    "LEGAL_NAME_MISMATCH"
+  ],
+  "injectionFlagged": false,
+  "screeningHit": false
+}

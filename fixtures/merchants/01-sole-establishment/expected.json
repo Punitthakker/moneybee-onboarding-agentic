@@ -1,0 +1,36 @@
+{
+  "entityType": "sole_establishment",
+  "description": "Clean sole establishment, single owner with 100 percent",
+  "classification": {
+    "trade_licence": 1,
+    "emirates_id": 1,
+    "passport": 1,
+    "residence_visa": 1,
+    "lease_ejari": 1,
+    "bank_letter": 1,
+    "website_description": 1,
+    "vat_certificate": 1
+  },
+  "fields": {
+    "company.legalName": "Falcon Dune Trading Establishment",
+    "licence.number": "SYN-100001",
+    "company.trn": "100123456700003",
+    "banking.iban": "AE070331234567890123456",
+    "activity.mcc": "5812",
+    "activity.expectedMonthlyVolume": 300000,
+    "activity.expectedAvgTicket": 150,
+    "company.tradeName": "Falcon Dune Cafe"
+  },
+  "ubos": [
+    "Ahmad Testari"
+  ],
+  "rating": "LOW",
+  "mustHaveFindings": [],
+  "mustNotHaveFindings": [
+    "MISSING_DOC",
+    "NAME_MISMATCH",
+    "LICENCE_EXPIRED"
+  ],
+  "injectionFlagged": false,
+  "screeningHit": false
+}

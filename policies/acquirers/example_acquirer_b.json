@@ -1,0 +1,34 @@
+{
+  "code": "EXAMPLE_ACQUIRER_B",
+  "label": "Example Acquirer B (illustrative stricter override, not a real acquirer)",
+  "example": true,
+  "overrides": {
+    "uboThresholdPct": 10,
+    "confidenceThreshold": 0.9,
+    "docExpiryWarnDays": 60,
+    "extraRequiredDocuments": ["bank_statement", "processing_statement"],
+    "extraRequiredFields": ["activity.description", "company.website"],
+    "mccRiskTiers": { "5999": "HIGH" }
+  },
+  "form": {
+    "title": "Example Acquirer B - KYB Form (generated)",
+    "fields": [
+      { "name": "company", "label": "Company", "source": "company.legalName" },
+      { "name": "licence", "label": "Licence", "source": "licence.number" },
+      { "name": "licence_expiry", "label": "Licence expiry", "source": "licence.expiryDate" },
+      { "name": "trn", "label": "TRN", "source": "company.trn" },
+      { "name": "business", "label": "Business description", "source": "activity.description" },
+      { "name": "mcc", "label": "MCC", "source": "activity.mcc" },
+      { "name": "volume", "label": "Monthly volume (AED)", "source": "activity.expectedMonthlyVolume" },
+      { "name": "ticket", "label": "Average ticket (AED)", "source": "activity.expectedAvgTicket" },
+      { "name": "iban", "label": "IBAN", "source": "banking.iban" },
+      { "name": "owner_1", "label": "Owner 1", "source": "ubo:0" },
+      { "name": "owner_2", "label": "Owner 2", "source": "ubo:1" },
+      { "name": "signatory", "label": "Signatory", "source": "signatory:0" }
+    ]
+  },
+  "documentNaming": {
+    "pattern": "KYB-{seq}-{docType}-{merchant}",
+    "order": ["trade_licence", "certificate_of_incorporation", "moa_aoa", "register_of_shareholders", "ubo_declaration", "authorised_signatory_letter", "emirates_id", "passport", "lease_ejari", "bank_letter", "bank_statement", "processing_statement", "vat_certificate", "website_description"]
+  }
+}

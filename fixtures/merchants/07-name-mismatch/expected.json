@@ -1,0 +1,35 @@
+{
+  "entityType": "llc",
+  "description": "Owner on the licence does not match the Emirates ID holder",
+  "classification": {
+    "trade_licence": 1,
+    "moa_aoa": 1,
+    "register_of_shareholders": 1,
+    "emirates_id": 1,
+    "passport": 1,
+    "lease_ejari": 1,
+    "bank_letter": 1,
+    "authorised_signatory_letter": 1,
+    "ubo_declaration": 1,
+    "website_description": 1,
+    "vat_certificate": 1
+  },
+  "fields": {
+    "company.legalName": "Mirage Names Trading LLC",
+    "licence.number": "SYN-700007",
+    "company.trn": "100123456700003",
+    "banking.iban": "AE070331234567890123456",
+    "activity.mcc": "5812",
+    "activity.expectedMonthlyVolume": 300000,
+    "activity.expectedAvgTicket": 150
+  },
+  "ubos": [
+    "Faisal Hamdan Qureshi"
+  ],
+  "rating": "REFER",
+  "mustHaveFindings": [
+    "NAME_MISMATCH"
+  ],
+  "injectionFlagged": false,
+  "screeningHit": false
+}

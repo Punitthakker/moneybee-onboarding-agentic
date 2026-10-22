@@ -1,0 +1,37 @@
+{
+  "code": "EXAMPLE_ACQUIRER_A",
+  "label": "Example Acquirer A (illustrative override, not a real acquirer)",
+  "example": true,
+  "overrides": {
+    "uboThresholdPct": 25,
+    "extraRequiredDocuments": ["vat_certificate"],
+    "extraRequiredFields": ["company.trn"],
+    "highRiskJurisdictions": ["Exampleland"]
+  },
+  "form": {
+    "title": "Example Acquirer A - Merchant Application (generated)",
+    "fields": [
+      { "name": "legal_name", "label": "Legal name", "source": "company.legalName" },
+      { "name": "trade_name", "label": "Trade name", "source": "company.tradeName" },
+      { "name": "entity_type", "label": "Entity type", "source": "case.entityType" },
+      { "name": "licence_no", "label": "Licence number", "source": "licence.number" },
+      { "name": "licence_authority", "label": "Licence authority", "source": "licence.authority" },
+      { "name": "licence_expiry", "label": "Licence expiry", "source": "licence.expiryDate" },
+      { "name": "trn", "label": "VAT TRN", "source": "company.trn" },
+      { "name": "address", "label": "Registered address", "source": "company.registeredAddress" },
+      { "name": "website", "label": "Website", "source": "company.website" },
+      { "name": "iban", "label": "Settlement IBAN", "source": "banking.iban" },
+      { "name": "mcc", "label": "MCC", "source": "activity.mcc" },
+      { "name": "monthly_volume", "label": "Expected monthly volume (AED)", "source": "activity.expectedMonthlyVolume" },
+      { "name": "avg_ticket", "label": "Expected average ticket (AED)", "source": "activity.expectedAvgTicket" },
+      { "name": "ubo_1", "label": "Beneficial owner 1", "source": "ubo:0" },
+      { "name": "ubo_2", "label": "Beneficial owner 2", "source": "ubo:1" },
+      { "name": "ubo_3", "label": "Beneficial owner 3", "source": "ubo:2" },
+      { "name": "signatory_1", "label": "Authorised signatory 1", "source": "signatory:0" }
+    ]
+  },
+  "documentNaming": {
+    "pattern": "{seq}_EXA_{docType}_{merchant}",
+    "order": ["trade_licence", "certificate_of_incorporation", "moa_aoa", "register_of_shareholders", "register_of_directors", "ubo_declaration", "authorised_signatory_letter", "emirates_id", "passport", "residence_visa", "lease_ejari", "bank_letter", "vat_certificate", "bank_statement", "website_description"]
+  }
+}
