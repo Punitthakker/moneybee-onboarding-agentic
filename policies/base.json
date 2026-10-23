@@ -7,30 +7,144 @@
   "tokenTtlHours": 24,
   "entityTypes": {
     "sole_establishment": {
-      "requiredDocuments": ["trade_licence", "emirates_id", "passport", "residence_visa", "lease_ejari", "bank_letter", "website_description"],
-      "optionalDocuments": ["vat_certificate", "bank_statement", "processing_statement", "company_profile"],
-      "requiredFields": ["company.legalName", "licence.number", "licence.expiryDate", "company.registeredAddress", "banking.iban", "activity.mcc", "activity.expectedMonthlyVolume", "activity.expectedAvgTicket"]
+      "requiredDocuments": [
+        "trade_licence",
+        "emirates_id",
+        "passport",
+        "residence_visa",
+        "lease_ejari",
+        "bank_letter",
+        "website_description"
+      ],
+      "optionalDocuments": [
+        "vat_certificate",
+        "bank_statement",
+        "processing_statement",
+        "company_profile"
+      ],
+      "requiredFields": [
+        "company.legalName",
+        "licence.number",
+        "licence.expiryDate",
+        "company.registeredAddress",
+        "banking.iban",
+        "activity.mcc",
+        "activity.expectedMonthlyVolume",
+        "activity.expectedAvgTicket"
+      ]
     },
     "llc": {
-      "requiredDocuments": ["trade_licence", "moa_aoa", "register_of_shareholders", "emirates_id", "passport", "lease_ejari", "bank_letter", "authorised_signatory_letter", "ubo_declaration", "website_description"],
-      "optionalDocuments": ["vat_certificate", "residence_visa", "bank_statement", "processing_statement", "company_profile", "corporate_shareholder_docs", "register_of_directors", "share_certificate"],
-      "requiredFields": ["company.legalName", "licence.number", "licence.expiryDate", "company.registeredAddress", "banking.iban", "activity.mcc", "activity.expectedMonthlyVolume", "activity.expectedAvgTicket"]
+      "requiredDocuments": [
+        "trade_licence",
+        "moa_aoa",
+        "register_of_shareholders",
+        "emirates_id",
+        "passport",
+        "lease_ejari",
+        "bank_letter",
+        "authorised_signatory_letter",
+        "ubo_declaration",
+        "website_description"
+      ],
+      "optionalDocuments": [
+        "vat_certificate",
+        "residence_visa",
+        "bank_statement",
+        "processing_statement",
+        "company_profile",
+        "corporate_shareholder_docs",
+        "register_of_directors",
+        "share_certificate"
+      ],
+      "requiredFields": [
+        "company.legalName",
+        "licence.number",
+        "licence.expiryDate",
+        "company.registeredAddress",
+        "banking.iban",
+        "activity.mcc",
+        "activity.expectedMonthlyVolume",
+        "activity.expectedAvgTicket"
+      ]
     },
     "free_zone": {
-      "requiredDocuments": ["trade_licence", "certificate_of_incorporation", "moa_aoa", "register_of_shareholders", "register_of_directors", "emirates_id", "passport", "lease_ejari", "bank_letter", "authorised_signatory_letter", "ubo_declaration", "website_description"],
-      "optionalDocuments": ["vat_certificate", "residence_visa", "bank_statement", "processing_statement", "company_profile", "corporate_shareholder_docs", "share_certificate"],
-      "requiredFields": ["company.legalName", "licence.number", "licence.authority", "licence.expiryDate", "company.registeredAddress", "banking.iban", "activity.mcc", "activity.expectedMonthlyVolume", "activity.expectedAvgTicket"]
+      "requiredDocuments": [
+        "trade_licence",
+        "certificate_of_incorporation",
+        "moa_aoa",
+        "register_of_shareholders",
+        "register_of_directors",
+        "emirates_id",
+        "passport",
+        "lease_ejari",
+        "bank_letter",
+        "authorised_signatory_letter",
+        "ubo_declaration",
+        "website_description"
+      ],
+      "optionalDocuments": [
+        "vat_certificate",
+        "residence_visa",
+        "bank_statement",
+        "processing_statement",
+        "company_profile",
+        "corporate_shareholder_docs",
+        "share_certificate"
+      ],
+      "requiredFields": [
+        "company.legalName",
+        "licence.number",
+        "licence.authority",
+        "licence.expiryDate",
+        "company.registeredAddress",
+        "banking.iban",
+        "activity.mcc",
+        "activity.expectedMonthlyVolume",
+        "activity.expectedAvgTicket"
+      ]
     },
     "mainland": {
-      "requiredDocuments": ["trade_licence", "moa_aoa", "register_of_shareholders", "emirates_id", "passport", "lease_ejari", "bank_letter", "authorised_signatory_letter", "ubo_declaration", "website_description"],
-      "optionalDocuments": ["vat_certificate", "residence_visa", "bank_statement", "processing_statement", "company_profile", "corporate_shareholder_docs", "register_of_directors", "share_certificate"],
-      "requiredFields": ["company.legalName", "licence.number", "licence.authority", "licence.expiryDate", "company.registeredAddress", "banking.iban", "activity.mcc", "activity.expectedMonthlyVolume", "activity.expectedAvgTicket"]
+      "requiredDocuments": [
+        "trade_licence",
+        "moa_aoa",
+        "register_of_shareholders",
+        "emirates_id",
+        "passport",
+        "lease_ejari",
+        "bank_letter",
+        "authorised_signatory_letter",
+        "ubo_declaration",
+        "website_description"
+      ],
+      "optionalDocuments": [
+        "vat_certificate",
+        "residence_visa",
+        "bank_statement",
+        "processing_statement",
+        "company_profile",
+        "corporate_shareholder_docs",
+        "register_of_directors",
+        "share_certificate"
+      ],
+      "requiredFields": [
+        "company.legalName",
+        "licence.number",
+        "licence.authority",
+        "licence.expiryDate",
+        "company.registeredAddress",
+        "banking.iban",
+        "activity.mcc",
+        "activity.expectedMonthlyVolume",
+        "activity.expectedAvgTicket"
+      ]
     }
   },
   "licenceNumberPatterns": {
     "default": "^[A-Z0-9][A-Z0-9\\-\\/\\.]{3,24}$"
   },
-  "highRiskJurisdictions": ["Testland-HR"],
+  "highRiskJurisdictions": [
+    "Testland-HR"
+  ],
   "mccRiskTiers": {
     "5411": "LOW",
     "5812": "LOW",
@@ -56,7 +170,8 @@
       "adverseMedia": 20,
       "docQuality": 10,
       "injectionSuspected": 25,
-      "verificationWarn": 5
+      "verificationWarn": 5,
+      "sanctionsHit": 40
     },
     "youngBusinessMonths": 12,
     "highMonthlyVolumeAed": 1000000,
@@ -65,7 +180,13 @@
     "lowDocQualityShare": 0.25,
     "lowBelow": 25,
     "mediumBelow": 50,
-    "secondReviewerRatings": ["HIGH", "REFER"]
+    "secondReviewerRatings": [
+      "HIGH",
+      "REFER"
+    ]
   },
-  "retention": { "closedCaseDays": 2555, "rejectedCaseDays": 365 }
+  "retention": {
+    "closedCaseDays": 2555,
+    "rejectedCaseDays": 365
+  }
 }

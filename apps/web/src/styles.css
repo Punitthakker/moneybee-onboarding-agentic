@@ -85,6 +85,7 @@ main { flex: 1; width: 100%; max-width: 1440px; margin: 0 auto; padding: 28px 20
 .card-dark { background: var(--footer); color: var(--cream); border: none; }
 .card-dark .muted { color: rgba(246,241,230,.6); }
 .card-dark .eyebrow { color: var(--honey); }
+.card-dark .btn:not(.btn-honey):not(.btn-dark):not(.btn-bad) { color: var(--ink); }
 .stack { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .between { justify-content: space-between; }

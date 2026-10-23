@@ -31,6 +31,7 @@ export const PolicySchema = z.object({
       highTicket: z.number(),
       chargebackHistory: z.number(),
       pepHit: z.number(),
+      sanctionsHit: z.number().default(40),
       adverseMedia: z.number(),
       docQuality: z.number(),
       injectionSuspected: z.number(),

@@ -52,7 +52,10 @@ export function scoreRisk(c: CaseRec, policy: Policy, now: Date): Omit<RiskResul
 
   // screening
   const hits = c.screening?.results.filter((r) => r.status !== 'CLEAR') ?? [];
-  if (hits.some((h) => h.category === 'SANCTIONS')) refer.push('SANCTIONS_HIT');
+  if (hits.some((h) => h.category === 'SANCTIONS')) {
+    refer.push('SANCTIONS_HIT');
+    add('SANCTIONS_HIT', w.sanctionsHit, 'A related party matches a sanctions list entry. Hard REFER trigger.');
+  }
   if (hits.some((h) => h.category === 'PEP')) add('PEP_HIT', w.pepHit, 'A related party is a politically exposed person.');
   if (hits.some((h) => h.category === 'ADVERSE_MEDIA')) add('ADVERSE_MEDIA', w.adverseMedia, 'Adverse media match on a related party.');
 
@@ -72,6 +75,7 @@ export function scoreRisk(c: CaseRec, policy: Policy, now: Date): Omit<RiskResul
 
   // hard REFER triggers
   if (c.findings.some((f) => f.code === 'LICENCE_EXPIRED')) refer.push('LICENCE_EXPIRED');
+  if (c.findings.some((f) => f.code === 'NAME_MISMATCH') && !breakdown.some((b) => b.code === 'VERIFICATION_FAIL')) add('NAME_MISMATCH', w.verificationWarn * 2, 'A company party does not match the identity documents.');
   if (c.injectionSuspected) refer.push('INJECTION_SUSPECTED');
   if (c.ubo && c.ubo.ubos.length === 0) refer.push('NO_UBO_DETERMINED');
   if (c.findings.some((f) => f.code === 'NAME_MISMATCH')) refer.push('NAME_MISMATCH');
