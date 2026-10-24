@@ -1,0 +1,90 @@
+[
+ {
+  "file": "01-ops-create-merchant-link.png",
+  "title": "Ops console: create the merchant link for a case"
+ },
+ {
+  "file": "02-portal-sign-in.png",
+  "title": "Merchant portal: sign in with UAE PASS"
+ },
+ {
+  "file": "03-portal-handoff.png",
+  "title": "Hand-off to the UAE PASS app"
+ },
+ {
+  "file": "04-sim-login.png",
+  "title": "UAE PASS app (simulated): sign in as a demo user"
+ },
+ {
+  "file": "05-portal-verified-request.png",
+  "title": "Verified with UAE PASS, choose documents to request"
+ },
+ {
+  "file": "06-portal-share-pending.png",
+  "title": "Share request waiting for approval (QR for phone)"
+ },
+ {
+  "file": "07-sim-share-request.png",
+  "title": "UAE PASS app (simulated): sharing request to approve"
+ },
+ {
+  "file": "08-sim-share-success.png",
+  "title": "UAE PASS app (simulated): sharing was successful"
+ },
+ {
+  "file": "09-portal-shared-vault.png",
+  "title": "Portal: documents shared, verified documents vault"
+ },
+ {
+  "file": "10-ops-uaepass-panel.png",
+  "title": "Ops console: identity, request and issuer-verified documents"
+ },
+ {
+  "file": "11-sim-share-expired.png",
+  "title": "UAE PASS app (simulated): sharing request expired"
+ },
+ {
+  "file": "12-portal-share-expired.png",
+  "title": "Portal: request expired, send a new one"
+ },
+ {
+  "file": "13-sim-share-declined.png",
+  "title": "UAE PASS app (simulated): sharing request declined"
+ },
+ {
+  "file": "14-portal-share-declined.png",
+  "title": "Portal: request declined"
+ },
+ {
+  "file": "15-portal-sign-review.png",
+  "title": "Portal: review and sign (feature flag on)"
+ },
+ {
+  "file": "16-sim-sign-request.png",
+  "title": "UAE PASS app (simulated): signature request"
+ },
+ {
+  "file": "17-sim-signed.png",
+  "title": "UAE PASS app (simulated): document signed"
+ },
+ {
+  "file": "18-portal-signed.png",
+  "title": "Portal: agreement signed with UAE PASS"
+ },
+ {
+  "file": "19-portal-arabic.png",
+  "title": "Portal in Arabic (right to left)"
+ },
+ {
+  "file": "20-sim-share-success-arabic.png",
+  "title": "UAE PASS app (simulated) in Arabic"
+ },
+ {
+  "file": "21-sim-login-sop1.png",
+  "title": "UAE PASS app (simulated): demo user with an unverified account"
+ },
+ {
+  "file": "22-portal-sop1-blocked.png",
+  "title": "Portal: SOP1 account blocked, upgrade message"
+ }
+]

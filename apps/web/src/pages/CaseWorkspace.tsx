@@ -5,10 +5,11 @@ import { api, can } from '../api';
 import { useMe } from '../App';
 import { DocViewer } from '../components/DocViewer';
 import { OwnershipGraph } from '../components/OwnershipGraph';
+import { UaePassPanel } from '../uaepass/OpsPanel';
 import { Empty, Meter, MockBanner, Modal, RiskChip, StatusPill, toast } from '../components/ui';
 import { DOC_LABELS, ENTITY_LABELS, FIELD_LABELS, SECTIONS, fmt, type Case, type CaseField, type CaseResponse, type Person, type Trace } from '../types';
 
-type Tab = 'fields' | 'ownership' | 'risk' | 'output' | 'gaps';
+type Tab = 'fields' | 'ownership' | 'risk' | 'output' | 'gaps' | 'uaepass';
 
 export function CaseWorkspace() {
   const { id = '' } = useParams();
@@ -98,7 +99,7 @@ export function CaseWorkspace() {
                 return (
                   <button key={d.id} className={`docitem ${doc?.id === d.id ? 'active' : ''}`} onClick={() => setSel({ docId: d.id, page: d.pageStart })}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="t">{DOC_LABELS[d.docType] ?? d.docType}</div>
+                      <div className="t">{DOC_LABELS[d.docType] ?? d.docType}{d.provenance === 'issuer_verified' && <span className="up-badge" style={{ marginInlineStart: 8, height: 18, fontSize: 10.5 }}>UAE PASS</span>}</div>
                       <div className="s" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f?.name} · p{d.pageStart}{d.pageEnd !== d.pageStart ? `-${d.pageEnd}` : ''} · {d.language}</div>
                     </div>
                     <span className={`pill ${d.verifiedStatus === 'VERIFIED' ? 'ok' : d.verifiedStatus === 'EXPIRED' ? 'bad' : d.verifiedStatus === 'FLAGGED' ? 'warn' : ''}`}>{d.verifiedStatus.toLowerCase()}</span>
@@ -114,7 +115,7 @@ export function CaseWorkspace() {
         {/* centre */}
         <div className="col">
           <div className="tabs" role="tablist">
-            {([['fields', 'Fields'], ['ownership', 'Ownership'], ['risk', 'Risk and decision'], ['output', 'Output'], ['gaps', `Gaps${c.gaps?.items.length ? ` (${c.gaps.items.length})` : ''}`]] as [Tab, string][]).map(([k, l]) => (
+            {([['fields', 'Fields'], ['ownership', 'Ownership'], ['risk', 'Risk and decision'], ['output', 'Output'], ['gaps', `Gaps${c.gaps?.items.length ? ` (${c.gaps.items.length})` : ''}`], ['uaepass', 'UAE PASS']] as [Tab, string][]).map(([k, l]) => (
               <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -123,6 +124,7 @@ export function CaseWorkspace() {
           {tab === 'risk' && <RiskPanel c={c} onChanged={refresh} />}
           {tab === 'output' && <OutputPanel c={c} webhooks={data.webhooks} onChanged={refresh} />}
           {tab === 'gaps' && <Gaps c={c} />}
+          {tab === 'uaepass' && <UaePassPanel c={c} onChanged={refresh} />}
         </div>
 
         {/* right: timeline */}

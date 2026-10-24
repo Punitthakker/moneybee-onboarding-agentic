@@ -8,11 +8,27 @@ import { NewCase } from './pages/NewCase';
 import { CaseWorkspace } from './pages/CaseWorkspace';
 import { Settings } from './pages/Settings';
 import { Toaster } from './components/ui';
+import { MerchantPortal } from './uaepass/Portal';
+import { SimLogin, SimShare, SimSign } from './uaepass/Sim';
 
 const MeCtx = createContext<Me | null>(null);
 export const useMe = () => useContext(MeCtx);
 
+/** Public screens (no ops login): the merchant portal and the simulated UAE PASS app. */
 export function App() {
+  return (
+    <Routes>
+      <Route path="/m" element={<MerchantPortal />} />
+      <Route path="/m/:invite" element={<MerchantPortal />} />
+      <Route path="/sim/uaepass/login" element={<SimLogin />} />
+      <Route path="/sim/uaepass/share/:no" element={<SimShare />} />
+      <Route path="/sim/uaepass/sign" element={<SimSign />} />
+      <Route path="*" element={<OpsApp />} />
+    </Routes>
+  );
+}
+
+function OpsApp() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [menu, setMenu] = useState(false);

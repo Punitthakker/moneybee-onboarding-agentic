@@ -48,6 +48,22 @@ npm run e2e        # Playwright happy path (needs the stack running)
 npm run typecheck
 ```
 
+## UAE PASS (mock and live)
+
+Merchants can sign in with UAE PASS, share their Emirates ID and Residence Visa from the UAE PASS app, and (behind a flag) sign the merchant agreement. It runs on a built-in simulator by default, so the demo needs no credentials.
+
+Flow: an underwriter opens a case, tab **UAE PASS**, and creates a **merchant link**. The merchant opens `/m/<invite>`, continues with UAE PASS (only SOP2 and SOP3 accounts pass, because only they have the Emirates ID verified), then sends a share request. They approve it in the app (the simulator at `/sim/uaepass/...`). The documents arrive in the case marked **issuer verified**, with the request number. They go through the same deterministic verifier as every other document, and nothing is approved automatically.
+
+| Setting | Meaning |
+|---|---|
+| `UAEPASS_MODE=mock` (default) | Simulator for login, document sharing and signing. Screens carry a "SIMULATED" strip. Mock-only routes under `/api/v1/mock/uaepass` include a demo clock so the expired screen can be shown. |
+| `UAEPASS_MODE=live` | Login is implemented against the public OAuth/OpenID flow. Document sharing and signing throw `NotConfigured` until UAE PASS grants access and shares the specification. |
+| `UAEPASS_SIGNING_ENABLED=true` | Shows the review-and-sign step and enables `/merchant/signing`. |
+
+Demo users in the simulator: a verified SOP3 user, a SOP3 user whose name differs from the trade licence owner (verifier finding), and an SOP1 user (blocked).
+
+Screens for every state (English and Arabic) are in `docs/screens/uaepass/`.
+
 ## API (`/api/v1`)
 ```
 POST   /cases                              create a case

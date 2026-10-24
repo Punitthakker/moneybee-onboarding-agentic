@@ -34,7 +34,7 @@ function merchantView(ctx: Ctx, c: CaseRec, signedIn: boolean) {
 
 export function uaepassRoutes(ctx: Ctx): Router {
   const r = Router();
-  const limiter = rateLimit({ windowMs: 60_000, limit: 90, standardHeaders: true, legacyHeaders: false, keyGenerator: (req) => req.ip ?? 'ip' });
+  const limiter = rateLimit({ windowMs: 60_000, limit: 240, standardHeaders: true, legacyHeaders: false, keyGenerator: (req) => req.ip ?? 'ip' });
   const web = ctx.cfg.PUBLIC_WEB_URL;
 
   /* ---------- ops: create the merchant invite link ---------- */
