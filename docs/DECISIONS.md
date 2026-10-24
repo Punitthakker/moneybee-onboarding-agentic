@@ -12,3 +12,11 @@
 10. **CSRF.** Cookie sessions plus a required `X-MoneyBee-CSRF` header on writes; CORS is locked to configured origins.
 11. **PDF text via pdfjs-dist 4.** pdf-parse bundles an old pdf.js that cannot read modern PDFs with object streams.
 12. **Node 22 in Docker** (Node 20+ supported for development).
+
+## UAE PASS (Oct 2026)
+- **Provider interface with a mock default.** The share and signing APIs are not publicly documented, so the product is built against one interface and a simulator. The live provider implements login only.
+- **Merchant portal added to this repo** at `/m` (public routes next to the ops console), reached through an invite link created by an underwriter, because the repo had no merchant-facing surface.
+- **Issuer-verified is evidence, not a decision.** Documents skip OCR (confidence 1.0, source UAE PASS) but still go through the verifier and the human review rules.
+- **Signing behind `UAEPASS_SIGNING_ENABLED`**, default off.
+- **No official UAE PASS logo or assets** are used until brand-usage approval is in place. The button shows a neutral text mark.
+- **Open questions for the UAE PASS team**: document sharing API and scopes for a private service provider, which documents can be requested (trade licence?), webhook or polling, staging credentials, pricing, branding rules, and whether SOP3 is required for financial-services KYC.

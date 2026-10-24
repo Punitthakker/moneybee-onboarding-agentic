@@ -10,6 +10,7 @@ import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
 import { caseRoutes, downloadRoute } from './routes/cases';
 import { onboardingRoutes } from './routes/onboarding';
+import { uaepassRoutes } from './integrations/uaepass/routes';
 import { errorHandler } from './routes/util';
 
 export function createApp(ctx: Ctx, queue: JobQueue): Express {
@@ -48,6 +49,7 @@ export function createApp(ctx: Ctx, queue: JobQueue): Express {
   v1.use(downloadRoute(ctx));
   v1.use(caseRoutes(ctx, queue));
   v1.use(adminRoutes(ctx));
+  v1.use(uaepassRoutes(ctx));
   app.use('/api/v1', v1);
 
   app.use((_req, res) => res.status(404).json({ error: 'not found' }));

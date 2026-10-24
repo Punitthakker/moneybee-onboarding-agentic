@@ -1,9 +1,10 @@
 export type Json = unknown;
+export interface UaePassCase { inviteExpiresAt?: string; identity?: { name: string; emiratesIdMasked: string; sopLevel: string; mobile?: string; email?: string; verifiedAt: string; provider: 'mock' | 'live' }; shareRequests: import('@moneybee/shared').ShareRequestView[]; signing: (import('@moneybee/shared').SigningView)[] }
 export interface SourceRef { docId?: string; page?: number; snippet?: string }
 export interface CaseField { value: Json; confidence: number; source?: SourceRef; needsReview?: boolean; edited?: { by: string; reason: string; at: string; previous: Json } }
 export interface Person { name: string; type?: 'natural' | 'corporate'; percentage?: number; nationality?: string; role?: string }
 export interface FileRec { id: string; name: string; mime: string; size: number; pageCount?: number; source: string; injectionSuspected?: boolean; injectionMatches?: string[]; originPath?: string }
-export interface DocRec { id: string; fileId: string; docType: string; language: string; issuingAuthority?: string; pageStart: number; pageEnd: number; classConfidence: number; issuedOn?: string | null; expiresOn?: string | null; verifiedStatus: string; fields?: Record<string, CaseField>; injectionSuspected?: boolean; needsReview?: boolean }
+export interface DocRec { id: string; fileId: string; docType: string; language: string; issuingAuthority?: string; pageStart: number; pageEnd: number; classConfidence: number; issuedOn?: string | null; expiresOn?: string | null; verifiedStatus: string; provenance?: 'issuer_verified'; uaepassRequestNo?: string; fields?: Record<string, CaseField>; injectionSuspected?: boolean; needsReview?: boolean }
 export interface Finding { code: string; severity: 'info' | 'warn' | 'fail'; message: string; fields?: string[]; docIds?: string[]; explanation?: string }
 export interface UboResult { thresholdPct: number; nodes: { id: string; label: string; kind: 'company' | 'entity' | 'person'; layer: number; isUbo?: boolean; effectivePct?: number }[]; edges: { from: string; to: string; pct: number }[]; ubos: { name: string; effectivePct: number; basis: string; paths: string[] }[]; unresolved: string[]; explanation: string; layers: number }
 export interface Screening { provider: string; isMock: boolean; results: { partyKey: string; subject: string; role: string; status: string; category: string | null; detail?: string }[] }
@@ -17,6 +18,7 @@ export interface Case {
   gaps?: { items: { kind: string; message: string }[]; draftMessage: string }; pack?: { acquirerCode: string; files: PackFile[]; submission: { mode: string; reference: string | null; isMock: boolean } | null };
   reviews: Review[]; needsReviewFields: string[]; injectionSuspected: boolean; usage: { tokens: number; budget: number; calls: number }; policyVersion?: number; modelVersion?: string; promptVersion?: string;
   run?: { seq: number; state: string; error?: string; startedAt?: string; finishedAt?: string };
+  uaepass?: UaePassCase;
   completion?: { merchantId: string; sqlCaseId: string; sqlWrittenAt: string; tokenId: string; tokenExpiresAt: string; completedBy: string };
 }
 export interface Trace { id: string; agent: string; step: string; status: string; startedAt: string; durationMs: number; model?: string; promptVersion?: string; tokensIn?: number; tokensOut?: number; output?: Json; summary?: string; toolCalls?: { name: string; input: Json; resultSummary?: string }[]; error?: string; runSeq: number }

@@ -9,6 +9,7 @@ import type { ScreeningProvider } from './agents/screening';
 import type { BlobStore } from './storage';
 import type { OnboardingRepository } from './sql/repository';
 import type { AcquirerAdapter } from './agents/packbuilder';
+import type { UaePassProvider } from './integrations/uaepass/types';
 
 export interface Ctx {
   cfg: Config;
@@ -22,6 +23,7 @@ export interface Ctx {
   bus: EventBus;
   screening: ScreeningProvider;
   adapters: Record<string, AcquirerAdapter>;
+  uaepass: UaePassProvider;
   /** secret used for signing short-lived file URLs */
   fileUrlSecret: string;
   now: () => Date;

@@ -9,6 +9,9 @@ import type {
   Policy,
   RiskRating,
   Role,
+  ShareRequestView,
+  SigningView,
+  SopLevel,
 } from '@moneybee/shared';
 
 export interface FileRec {
@@ -19,7 +22,7 @@ export interface FileRec {
   sha256: string;
   storageKey: string;
   pageCount?: number;
-  source: 'upload' | 'zip' | 'email' | 'email_body';
+  source: 'upload' | 'zip' | 'email' | 'email_body' | 'uaepass' | 'uaepass_signed';
   /** original path inside a zip or folder upload */
   originPath?: string;
   duplicateOf?: string;
@@ -41,6 +44,9 @@ export interface DocRec {
   expiresOn?: string | null;
   verifiedStatus: 'UNVERIFIED' | 'VERIFIED' | 'FLAGGED' | 'EXPIRED';
   extracted?: boolean;
+  /** issuer_verified: delivered by the issuer through UAE PASS. Still passes through the deterministic verifier. */
+  provenance?: 'issuer_verified';
+  uaepassRequestNo?: string;
   fields?: Record<string, ExtractedField>;
   injectionSuspected?: boolean;
   needsReview?: boolean;
@@ -133,6 +139,25 @@ export interface ChecklistItem {
   expired: boolean;
 }
 
+/** UAE PASS state for a case. Emirates ID number is stored encrypted plus a keyed hash, never in plain text. */
+export interface CaseUaePass {
+  inviteHash?: string;
+  inviteExpiresAt?: string;
+  identity?: {
+    name: string;
+    emiratesIdEnc: string;
+    emiratesIdHash: string;
+    emiratesIdMasked: string;
+    sopLevel: SopLevel;
+    mobile?: string;
+    email?: string;
+    verifiedAt: string;
+    provider: 'mock' | 'live';
+  };
+  shareRequests: ShareRequestView[];
+  signing: (SigningView & { documentKey: string; transactionId: string })[];
+}
+
 export interface CaseRec {
   id: string;
   ref: string;
@@ -169,6 +194,7 @@ export interface CaseRec {
   modelVersion?: string;
   promptVersion?: string;
   run?: { seq: number; state: 'idle' | 'queued' | 'running' | 'failed' | 'done'; startedAt?: string; finishedAt?: string; error?: string };
+  uaepass?: CaseUaePass;
   completion?: {
     merchantId: string;
     sqlCaseId: string;

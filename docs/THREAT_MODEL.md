@@ -9,3 +9,13 @@
 | **PII leakage via the model** | Document content sent to an external LLM; model echoing data in traces | Live mode is opt-in by key; mock mode keeps everything local. Traces store structured outputs, not raw documents. ID numbers are encrypted in SQL and masked for viewers and in the claim package. | Content sent in live mode is processed by the LLM provider under its terms. |
 | **Privilege abuse** | Insider approves their own case or skips the second review | Role checks, mandatory notes, distinct approver rule, second approval must be SECOND_REVIEWER, full audit trail | Collusion between two reviewers. |
 | **CSRF / XSS** | Cross-site form posts; script in extracted text | SameSite cookie plus required custom header, CORS allow-list, React escapes all text, the PDF highlight renderer escapes HTML | |
+
+## UAE PASS trust boundary
+| Threat | Control |
+|---|---|
+| Forged or replayed login callback | State and nonce in a signed cookie, PKCE, short TTL, single-use mock codes, exact redirect URI. |
+| Stolen invite link | 256-bit token, hash at rest, expiry, header transport; share and signing also need the UAE PASS session cookie. |
+| Low-assurance account used for KYC | SOP1 and accounts without an Emirates ID are refused. |
+| Tampered documents from the provider | Documents are hashed and stored like any upload, tagged with the request number, and still verified (expiry, name match). Signature and integrity checking for the live API is to be defined with the UAE PASS specification. |
+| Emirates ID leakage | Encrypted at rest, keyed hash for matching, masked in every response, never logged. |
+| Simulator mistaken for the real thing | Strip on every simulator screen, `SIMULATED` badges, mock routes not mounted in live mode, signed PDFs stamped as simulated. |

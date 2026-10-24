@@ -35,8 +35,17 @@ const EmailBody = z.object({
 
 /** VIEWER role sees ID numbers masked. */
 function present(c: CaseRec, role: string): CaseRec {
-  if (role !== 'VIEWER') return c;
   const out = structuredClone(c);
+  // never send invite hashes or the encrypted Emirates ID to the browser
+  if (out.uaepass) {
+    delete out.uaepass.inviteHash;
+    if (out.uaepass.identity) {
+      const { emiratesIdEnc: _e, emiratesIdHash: _h, ...rest } = out.uaepass.identity;
+      out.uaepass.identity = rest as typeof out.uaepass.identity;
+    }
+    out.uaepass.signing = out.uaepass.signing.map(({ documentKey: _k, ...s }) => s as never);
+  }
+  if (role !== 'VIEWER') return out;
   for (const h of out.idHolders) h.idNumber = maskId(h.idNumber) ?? undefined;
   for (const d of out.documents) if (d.fields?.idNumber) d.fields.idNumber.value = maskId(String(d.fields.idNumber.value));
   return out;

@@ -23,3 +23,12 @@ All data stays in the configured stores. Choose the region of your MongoDB, SQL 
 
 ## What the product does not claim
 The checks are labelled **policy checks**. The product does not assert legal or regulatory compliance. Interpretation of CBUAE, VARA or acquirer rules stays with the compliance team, and screening is only real when a real `ScreeningProvider` is configured.
+
+## UAE PASS
+- **Invite links** are 256-bit, stored as a SHA-256 hash, compared in constant time, expire (default 72 h) and travel in an `x-invite` header, never in an API URL that gets logged. The portal keeps it in session storage and strips it from the address bar.
+- **Login** uses OAuth state, nonce and PKCE (S256). State is held in a signed, httpOnly, 10 minute cookie. A wrong or replayed state is refused. Codes and tokens are never logged.
+- **Account level**: only SOP2 and SOP3 (Emirates ID verified) are accepted.
+- **Emirates ID number** is encrypted with the PII cipher, matched by keyed hash, masked on screen, and never sent to the browser in full.
+- **Merchant session** is a separate httpOnly cookie. Share requests and signing need both the invite and that session, so the link alone is not enough.
+- **Documents** shared through UAE PASS enter intake like any other file (encrypted storage, hashing, dedupe) and carry `provenance: issuer_verified`. The verifier still runs. The no-automatic-approval rule is unchanged.
+- **Audit**: login, share request, approval, decline, expiry, ingestion and signing events are all recorded.
