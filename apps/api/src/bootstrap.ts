@@ -4,6 +4,7 @@ import { resolveLlmMode, type Config } from './config';
 import type { Ctx } from './context';
 import { PiiCipher } from './crypto/pii';
 import { createStore } from './db';
+import { createUaePassProvider } from './integrations/uaepass/factory';
 import type { Store } from './db/types';
 import { EventBus } from './events';
 import { apiSubmitMockAdapter, filePackAdapter } from './agents/packbuilder';
@@ -42,6 +43,6 @@ export async function buildCtx(cfg: Config, log: Logger, o: BuildOverrides = {})
   const fileUrlSecret = createHash('sha256').update(`file-url:${cfg.JWT_SECRET || piiKey}`).digest('base64url');
   return {
     cfg, log, store, repo, blobs, cipher, llm, policies, bus: new EventBus(), screening: createScreeningProvider(cfg.SCREENING_PROVIDER),
-    adapters: { file_pack: filePackAdapter, api_submit_mock: apiSubmitMockAdapter }, fileUrlSecret, now: o.now ?? (() => new Date()),
+    adapters: { file_pack: filePackAdapter, api_submit_mock: apiSubmitMockAdapter }, uaepass: createUaePassProvider(cfg), fileUrlSecret, now: o.now ?? (() => new Date()),
   };
 }

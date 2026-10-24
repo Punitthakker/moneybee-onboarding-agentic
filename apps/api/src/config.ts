@@ -58,6 +58,22 @@ const EnvSchema = z.object({
   SEED_DEMO_DATA: bool(true),
   DEMO_PASSWORD: z.string().default(''),
 
+  /** Where the merchant portal lives. Used for UAE PASS redirects. */
+  PUBLIC_WEB_URL: z.string().default('http://localhost:5173'),
+  /** mock: built-in simulator, no credentials. live: real UAE PASS (needs onboarding with the UAE PASS team). */
+  UAEPASS_MODE: z.enum(['mock', 'live']).default('mock'),
+  UAEPASS_SIGNING_ENABLED: bool(false),
+  UAEPASS_PROVIDER_NAME: z.string().default('MoneyBee'),
+  UAEPASS_SHARE_TTL_MINUTES: z.coerce.number().int().positive().default(30),
+  UAEPASS_INVITE_TTL_HOURS: z.coerce.number().positive().default(72),
+  /** Live only. Endpoint defaults are the commonly used staging values and are UNVERIFIED: confirm during onboarding. */
+  UAEPASS_BASE_URL: z.string().default('https://stg-id.uaepass.ae'),
+  UAEPASS_CLIENT_ID: z.string().optional(),
+  UAEPASS_CLIENT_SECRET: z.string().optional(),
+  UAEPASS_REDIRECT_URI: z.string().optional(),
+  UAEPASS_SCOPE: z.string().default('urn:uae:digitalid:profile:general'),
+  UAEPASS_ACR_VALUES: z.string().default('urn:safelayer:tws:policies:authentication:level:low'),
+
   MAIL_HOST: z.string().optional(),
   MAIL_USER: z.string().optional(),
   MAIL_PASS: z.string().optional(),

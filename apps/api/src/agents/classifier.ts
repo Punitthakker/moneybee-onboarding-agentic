@@ -18,7 +18,7 @@ export async function classifyFiles(ctx: Ctx, h: StepHandle, c: CaseRec): Promis
   const done = new Set(c.documents.map((d) => d.fileId));
   const out: DocRec[] = [];
   for (const f of c.files) {
-    if (done.has(f.id) || f.duplicateOf || f.mime === 'text/plain') continue;
+    if (done.has(f.id) || f.duplicateOf || f.mime === 'text/plain' || f.source === 'uaepass_signed') continue;
     const data = await ctx.blobs.get(f.storageKey);
     if (f.mime === 'application/pdf') {
       const pages = ctx.llm.isMock ? await pdfPages(data) : [];
