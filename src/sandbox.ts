@@ -9,7 +9,7 @@ import type { ActorType, Level } from './core/types.js';
 export function provisionClient(
   services: Services,
   tenantId: string,
-  opts: { scopes: string[]; actorType?: ActorType; roles?: string[] },
+  opts: { scopes: string[]; actorType?: ActorType; roles?: string[]; deterministicSeed?: string },
 ): { client: ClientRec; secret: string } {
   const tenant = services.store.getTenant(tenantId);
   if (!tenant) throw new Error(`unknown tenant ${tenantId}`);
@@ -59,7 +59,7 @@ export function seedSandbox(services: Services): SandboxWorld {
   const allowed = (level: Level) => [...spec.scopes.entries()].filter(([, v]) => v.levels.includes(level)).map(([k]) => k);
   const credentials: SandboxWorld['credentials'] = {};
   const cred = (name: string, tenant: { id: string; level: Level }, extra: { actorType?: 'user' | 'service' | 'agent'; roles?: string[]; scopes?: string[] } = {}) => {
-    const { client, secret } = provisionClient(services, tenant.id, { scopes: extra.scopes ?? allowed(tenant.level), actorType: extra.actorType, roles: extra.roles });
+    const { client, secret } = provisionClient(services, tenant.id, { scopes: extra.scopes ?? allowed(tenant.level), actorType: extra.actorType, roles: extra.roles, deterministicSeed: process.env.MB_SANDBOX_SEED || undefined });
     credentials[name] = { clientId: client.clientId, secret, tenantId: tenant.id, level: tenant.level, actorType: client.actorType, roles: client.roles };
   };
   cred('platform', platform);

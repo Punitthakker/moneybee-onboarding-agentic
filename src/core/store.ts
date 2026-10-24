@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import type { ActorType, Level, Tenant, TenantScope } from './types.js';
 import { newId, safeEqual, sha256Hex } from './util.js';
 
@@ -122,9 +122,11 @@ export class MemoryStore {
     return out;
   }
 
-  createClient(input: { tenantId: string; scopes: string[]; actorType?: ActorType; roles?: string[]; env?: 'test' }): { client: ClientRec; secret: string } {
-    const clientId = `mb_test_${randomBytes(9).toString('base64url')}`;
-    const secret = `mb_test_sec_${randomBytes(24).toString('base64url')}`;
+  createClient(input: { tenantId: string; scopes: string[]; actorType?: ActorType; roles?: string[]; env?: 'test'; deterministicSeed?: string }): { client: ClientRec; secret: string } {
+    // deterministicSeed is for the hosted sandbox only, so credentials survive a restart of the in-memory process.
+    const derive = (label: string, n: number) => createHmac('sha256', input.deterministicSeed as string).update(label).digest().subarray(0, n).toString('base64url');
+    const clientId = `mb_test_${input.deterministicSeed ? derive(`id|${input.tenantId}|${input.actorType ?? 'service'}`, 9) : randomBytes(9).toString('base64url')}`;
+    const secret = `mb_test_sec_${input.deterministicSeed ? derive(`sec|${input.tenantId}|${input.actorType ?? 'service'}`, 24) : randomBytes(24).toString('base64url')}`;
     const client: ClientRec = {
       clientId,
       // High-entropy random secret, so a fast hash is adequate. Human passwords would need a slow hash.
