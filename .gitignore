@@ -1,0 +1,5 @@
+node_modules
+dist
+.env
+.sandbox-keys.json
+*.log

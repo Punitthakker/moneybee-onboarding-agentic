@@ -1,0 +1,180 @@
+extends: ['spectral:oas']
+
+# House rules. The bundler adds standard headers and the 401, 403, 422, 429 and 500 responses, so authors
+# only declare what is specific to their operation. These rules lint the bundled output.
+rules:
+  # Standard OAS rules we tighten or relax on purpose
+  operation-description: error
+  operation-tag-defined: error
+  operation-operationId: error
+  info-contact: error
+  oas3-api-servers: error
+  # tags must be defined, but each module owns its tag description
+  openapi-tags-alphabetical: off
+
+  mb-operation-id-camel-case:
+    description: operationId must be lowerCamelCase so generated SDK method names are consistent.
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete].operationId
+    then:
+      function: pattern
+      functionOptions:
+        match: '^[a-z][A-Za-z0-9]+$'
+
+  mb-summary-present:
+    description: Every operation needs a summary written for an AI agent choosing between calls.
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      field: summary
+      function: truthy
+
+  mb-description-informative:
+    description: Operation descriptions must be at least 80 characters. They are what an agent reads to pick the right call.
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete].description
+    then:
+      function: length
+      functionOptions:
+        min: 80
+
+  mb-mcp-risk-declared:
+    description: Every operation declares x-mcp-risk as read, write, money-moving or decision-recording.
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [x-mcp-risk]
+          properties:
+            x-mcp-risk:
+              enum: [read, write, money-moving, decision-recording]
+
+  mb-read-risk-matches-method:
+    description: A GET operation must be classed as read, and only GET may be classed as read.
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          oneOf:
+            - properties:
+                x-mcp-risk: { const: read }
+              required: [x-mcp-risk]
+              not:
+                anyOf:
+                  - required: [requestBody]
+            - not:
+                properties:
+                  x-mcp-risk: { const: read }
+                required: [x-mcp-risk]
+
+  mb-scopes-declared:
+    description: Every operation declares x-required-scopes, even if empty.
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      field: x-required-scopes
+      function: defined
+
+  mb-decision-recording-is-human-only:
+    description: Operations classed decision-recording must require a human user and at least one role.
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          if:
+            properties:
+              x-mcp-risk: { const: decision-recording }
+            required: [x-mcp-risk]
+          then:
+            properties:
+              x-required-actor: { const: user }
+              x-required-roles: { type: array, minItems: 1 }
+            required: [x-required-actor, x-required-roles]
+
+  mb-idempotency-key-required:
+    description: Every state-changing operation takes the Idempotency-Key header, unless marked x-idempotency-exempt.
+    severity: error
+    given: $.paths[*][post,put,patch,delete]
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          if:
+            not:
+              required: [x-idempotency-exempt]
+          then:
+            required: [parameters]
+            properties:
+              parameters:
+                type: array
+                contains:
+                  type: object
+                  required: [name, in, required]
+                  properties:
+                    name: { const: Idempotency-Key }
+                    in: { const: header }
+                    required: { const: true }
+
+  mb-secured-or-explicitly-open:
+    description: Operations are secured by the global oauth2 scheme. Only the token endpoint may opt out with security [].
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete].security
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          maxItems: 0
+
+  mb-error-responses-use-envelope:
+    description: 4xx and 5xx responses must use the shared Error schema (or OAuthError for the token endpoint).
+    severity: error
+    given: $.paths[*][*].responses[?(@property >= '400')].content.application/json.schema
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [required, properties]
+          anyOf:
+            - properties:
+                required: { const: [error] }
+            - properties:
+                required: { contains: { const: error } }
+
+  mb-untrusted-free-text-marked:
+    description: Free-text properties named like user content must carry x-untrusted true, so agents treat them as data and never as instructions.
+    severity: error
+    given: $..properties[name,description,memo,note,notes,reference,label,comment,narrative,remarks]
+    then:
+      field: x-untrusted
+      function: truthy
+
+  mb-webhook-has-event-version:
+    description: Every webhook event declares x-event-version.
+    severity: error
+    given: $.webhooks[*].post
+    then:
+      field: x-event-version
+      function: truthy
+
+  mb-list-has-pagination:
+    description: Collection GET operations must take limit and starting_after parameters.
+    severity: error
+    given: $.paths[?(@property.match(/^[^{}]*$/) && !@property.match(/\/(me|verification)$/))].get
+    then:
+      field: parameters
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          allOf:
+            - contains: { properties: { name: { const: limit } }, required: [name] }
+            - contains: { properties: { name: { const: starting_after } }, required: [name] }

@@ -1,0 +1,5534 @@
+openapi: 3.1.0
+info:
+  title: MoneyBee Open API
+  version: '2026-10-24'
+  summary: White-label payment OS API for banks, acquirers, PSPs, PayFacs and merchants.
+  description: 'The MoneyBee API is organised around REST. It has predictable resource-oriented URLs, JSON request and response bodies, standard
+    HTTP verbs and response codes, and prefixed object ids.
+
+
+    **Target contract.** This file is the Stripe-style contract for all 65 operations. The foundation (11 operations) is built and tested to an
+    earlier shape and will be migrated to this contract before any customer uses it. Onboarding, Compliance and Quantum-safe cards are designed
+    here and not yet built.
+
+
+    **Conventions you will recognise.** Every object has an `id` with a type prefix, an `object` field, `livemode`, `created_at`, and (where it
+    makes sense) `metadata`. Lists return `{object: "list", data, has_more, url}` and page with `starting_after` and `ending_before`. Related
+    objects are ids by default and can be expanded with `expand[]`. Writes take an `Idempotency-Key`. Webhooks carry a `MoneyBee-Signature` header
+    with a timestamp and an HMAC-SHA256.
+
+
+    **Where we differ on purpose.** Requests are JSON, not form-encoded. Timestamps are ISO 8601, not unix seconds. Access uses OAuth client credentials
+    with a tenant behind each credential, because partners manage merchants. Decisions are recorded by humans only and are refused for agents.'
+  contact:
+    name: MoneyBee API
+    email: api@moneybee.world
+  x-logo:
+    altText: MoneyBee
+servers:
+- url: https://api.moneybee.world/v1
+  description: Live (proposed host, not available yet)
+- url: https://sandbox.api.moneybee.world/v1
+  description: Sandbox (proposed host, not provisioned yet)
+security:
+- oauth2: []
+tags:
+- name: Authentication
+  description: Exchange credentials for a bearer token.
+- name: Context
+  description: Who you are calling as.
+- name: Approvals
+  description: Second-person approval for high-impact decisions. One resource shared by every module.
+- name: Webhooks
+  description: Endpoints and delivery attempts.
+- name: Events
+  description: Everything that happens is an event. Replay any of them.
+- name: Audit
+  description: Tamper-evident log of every call. Verify the hash chain.
+- name: Onboarding
+  description: Agentic KYB and KYC. The agent prepares, a human underwriter decides.
+- name: Compliance
+  description: AML rules, backtests, alerts, cases, evidence and goAML export.
+- name: Quantum-safe cards
+  description: Hybrid post-quantum keys, envelopes, signatures, agent tokens and mandates.
+x-tagGroups:
+- name: Core
+  tags:
+  - Authentication
+  - Context
+  - Approvals
+  - Webhooks
+  - Events
+  - Audit
+- name: Modules
+  tags:
+  - Onboarding
+  - Compliance
+  - Quantum-safe cards
+paths:
+  /oauth/token:
+    post:
+      operationId: createAccessToken
+      summary: Exchange client credentials for an access token
+      description: 'OAuth 2.0 client credentials grant. Send `grant_type=client_credentials` with `client_id` and
+
+        `client_secret` in the form body, or as HTTP Basic credentials. The optional `scope` is a
+
+        space-separated subset of the scopes the client is allowed. Omit it to receive all allowed scopes.
+
+        The token is short-lived and carries the tenant, scopes and environment of the credential.'
+      tags:
+      - Authentication
+      security: []
+      x-mcp-risk: write
+      x-required-scopes: []
+      x-idempotency-exempt: true
+      x-error-format: oauth
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OAuthTokenRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthTokenRequest'
+      responses:
+        '200':
+          description: Token issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthTokenResponse'
+        '400':
+          description: OAuth error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthError'
+        '401':
+          description: Bad client credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me:
+    get:
+      operationId: getCurrentContext
+      summary: Show the caller's tenant, scopes and environment
+      tags:
+      - Context
+      description: 'Returns who the access token represents: the tenant and its level, the parent tenant, the granted
+
+        scopes, the actor type (service, user or agent) and the environment. Use it to confirm a credential
+
+        before calling anything else. It needs no scope beyond a valid token.'
+      parameters: []
+      x-mcp-risk: read
+      x-required-scopes:
+      - public (client credentials)
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentContext'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /audit-events:
+    get:
+      operationId: listAuditEvents
+      summary: List audit events
+      tags:
+      - Audit
+      description: 'Lists audit events for the caller''s tenant and the tenants below it, newest first by default. Every
+
+        authenticated API action is recorded: who acted (user, service or agent), what they did, on which
+
+        resource, which scopes were used and the result. The log is append-only and hash-chained per tenant.
+
+        Use `verifyAuditChain` to check a tenant''s chain.'
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: tenant
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `tenant`.
+      x-mcp-risk: read
+      x-required-scopes:
+      - audit:read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /audit-events/verification:
+    get:
+      operationId: verifyAuditChain
+      summary: Verify the audit hash chain for a tenant
+      tags:
+      - Audit
+      description: 'Recomputes the hash chain of one tenant''s audit log and reports whether it is intact. Each event
+
+        stores the hash of the previous event, so any edit, deletion or reordering breaks the chain at a
+
+        known sequence number. Defaults to the caller''s own tenant.'
+      parameters:
+      - name: tenant
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `tenant`.
+      x-mcp-risk: read
+      x-required-scopes:
+      - audit:read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditChainVerification'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /webhook-endpoints:
+    post:
+      operationId: createWebhookEndpoint
+      summary: Register a webhook endpoint
+      tags:
+      - Webhooks
+      description: 'Registers an HTTPS URL to receive signed events. Choose event types from the event catalogue, or `*`
+
+        for all. The signing secret is returned once in this response and never again. The endpoint receives
+
+        events from the caller''s tenant and the tenants below it. Private, loopback and link-local addresses
+
+        are refused (sandbox may allow loopback).'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - webhooks:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - url
+              - events
+              additionalProperties: false
+              properties:
+                url:
+                  type: string
+                events:
+                  type: array
+                  items:
+                    type: string
+                description:
+                  type: string
+                  x-untrusted: true
+                metadata:
+                  $ref: '#/components/schemas/Metadata'
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    get:
+      operationId: listWebhookEndpoints
+      summary: List webhook endpoints
+      tags:
+      - Webhooks
+      description: 'Lists webhook endpoints owned by the caller''s tenant and the tenants below it. Secrets are never
+
+        returned here.'
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      x-mcp-risk: read
+      x-required-scopes:
+      - webhooks:read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpointList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /webhook-endpoints/{endpoint_id}:
+    delete:
+      operationId: disableWebhookEndpoint
+      summary: Disable a webhook endpoint
+      tags:
+      - Webhooks
+      description: 'Stops all future deliveries to the endpoint and keeps its history. Pending deliveries are cancelled.
+
+        Only the owning tenant can disable an endpoint. Disabling is permanent; register a new endpoint
+
+        to resume.'
+      parameters:
+      - name: endpoint_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - webhooks:write
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deleted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /webhook-endpoints/{endpoint_id}/ping:
+    post:
+      operationId: pingWebhookEndpoint
+      summary: Send a test event to one webhook endpoint
+      tags:
+      - Webhooks
+      description: 'Emits a `webhook.ping` event delivered only to this endpoint, so you can test your receiver and
+
+        signature check without waiting for real activity. Only the owning tenant can ping an endpoint.'
+      parameters:
+      - name: endpoint_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - webhooks:write
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /events:
+    get:
+      operationId: listEvents
+      summary: List events
+      tags:
+      - Events
+      description: 'Lists events from the caller''s tenant and the tenants below it, newest first by default. Use it to
+
+        find an event to replay, or to reconcile against webhooks you received.'
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: type
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `type`.
+      x-mcp-risk: read
+      x-required-scopes:
+      - events:read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /events/{event_id}/replay:
+    post:
+      operationId: replayEvent
+      summary: Re-send a past event to webhook endpoints
+      tags:
+      - Events
+      description: 'Creates fresh deliveries of an existing event, with the original event id and payload but a new
+
+        signature timestamp. Send `endpoint_id` to replay to one endpoint; omit it to replay to every active
+
+        endpoint that subscribes to the event type. Receivers must treat deliveries as at-least-once and
+
+        deduplicate on the event id.'
+      parameters:
+      - name: event_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - events:replay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: []
+              additionalProperties: false
+              properties:
+                endpoint:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDelivery'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /webhook-deliveries:
+    get:
+      operationId: listWebhookDeliveries
+      summary: List webhook deliveries and their attempts
+      tags:
+      - Webhooks
+      description: 'Lists delivery records with every attempt: time, HTTP status, error and duration. Use it to debug a
+
+        receiver that is not getting events. Covers the caller''s tenant and the tenants below it.'
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `endpoint`.
+      x-mcp-risk: read
+      x-required-scopes:
+      - webhooks:read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /approvals:
+    get:
+      operationId: listApprovals
+      summary: List approvals
+      tags:
+      - Approvals
+      description: Pending and past second-person approvals for the caller tenant. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `status`.
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - approvals:read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /approvals/{approval_id}:
+    get:
+      operationId: getApproval
+      summary: Get approval
+      tags:
+      - Approvals
+      description: What is being approved, by whom it was requested, and the first decision. Visible to the caller tenant and the tenants below
+        it.
+      parameters:
+      - name: approval_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - approvals:read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /approvals/{approval_id}/decision:
+    post:
+      operationId: decideApproval
+      summary: Decide approval
+      tags:
+      - Approvals
+      description: Human only, must be a different person from the requester; reason code required. Only an authenticated human user with the
+        required role can call this; service and agent credentials are refused with `human_actor_required`. A reason code is required and the
+        decision cannot be changed.
+      parameters:
+      - name: approval_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: decision-recording
+      x-required-scopes:
+      - approvals:decide
+      x-required-actor: user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason_code
+              - outcome
+              additionalProperties: false
+              properties:
+                outcome:
+                  type: string
+                  enum:
+                  - approve
+                  - decline
+                reason_code:
+                  type: string
+                note:
+                  type: string
+                  x-untrusted: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+      x-required-roles:
+      - approver
+  /onboarding/applications:
+    post:
+      operationId: createApplication
+      summary: Create application
+      tags:
+      - Onboarding
+      description: Starts a draft application for a merchant. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - onboarding:applications.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - merchant
+              additionalProperties: false
+              properties:
+                merchant:
+                  $ref: '#/components/schemas/MerchantInput'
+                metadata:
+                  $ref: '#/components/schemas/Metadata'
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    get:
+      operationId: listApplications
+      summary: List applications
+      tags:
+      - Onboarding
+      description: Filter by state, risk band, date. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `state`.
+      - name: risk_band
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `risk_band`.
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - onboarding:applications.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /onboarding/applications/{application_id}:
+    get:
+      operationId: getApplication
+      summary: Get application
+      tags:
+      - Onboarding
+      description: Current state and history. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: application_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - onboarding:applications.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /onboarding/applications/{application_id}/documents:
+    post:
+      operationId: uploadDocument
+      summary: Upload document
+      tags:
+      - Onboarding
+      description: Multipart, up to 10 MB, PDF/JPEG/PNG. Malware scan runs after upload. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: application_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - onboarding:documents.write
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              additionalProperties: false
+              properties:
+                file:
+                  type: string
+                  format: binary
+                type:
+                  type: string
+                  enum:
+                  - licence
+                  - id
+                  - proof_of_address
+                  - ownership
+                  - bank_statement
+                  - other
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    get:
+      operationId: listDocuments
+      summary: List documents
+      tags:
+      - Onboarding
+      description: Each document shows scan and extraction status. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: application_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      x-mcp-risk: read
+      x-required-scopes:
+      - onboarding:applications.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /onboarding/applications/{application_id}/submission:
+    post:
+      operationId: submitApplication
+      summary: Submit application
+      tags:
+      - Onboarding
+      description: Locks the documents and starts the agent analysis. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: application_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - onboarding:applications.write
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /onboarding/applications/{application_id}/analysis:
+    get:
+      operationId: getAnalysis
+      summary: Get analysis
+      tags:
+      - Onboarding
+      description: 'Agent-prepared pack: entities, ownership graph, risk band, reason codes, page-level source links. Screening is labelled MOCK
+        in the sandbox.'
+      parameters:
+      - name: application_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - onboarding:analysis.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /onboarding/applications/{application_id}/information-requests:
+    post:
+      operationId: requestInformation
+      summary: Request information
+      tags:
+      - Onboarding
+      description: Agent or human asks the merchant for more. Free text is untrusted. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: application_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - onboarding:applications.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - message
+              additionalProperties: false
+              properties:
+                message:
+                  type: string
+                  x-untrusted: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InformationRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /onboarding/applications/{application_id}/decision:
+    post:
+      operationId: recordDecision
+      summary: Record decision
+      tags:
+      - Onboarding
+      description: Human underwriter only. Approve, decline or refer, with a reason code. High risk approvals need a second person. Only an authenticated
+        human user with the required role can call this; service and agent credentials are refused with `human_actor_required`. A reason code
+        is required and the decision cannot be changed.
+      parameters:
+      - name: application_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: decision-recording
+      x-required-scopes:
+      - onboarding:decisions.write
+      x-required-actor: user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason_code
+              - outcome
+              additionalProperties: false
+              properties:
+                outcome:
+                  type: string
+                  enum:
+                  - approve
+                  - decline
+                  - refer
+                reason_code:
+                  type: string
+                note:
+                  type: string
+                  x-untrusted: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+      x-required-roles:
+      - underwriter
+  /onboarding/reason-codes:
+    get:
+      operationId: listReasonCodes
+      summary: List reason codes
+      tags:
+      - Onboarding
+      description: The fixed list of reason codes a decision may use. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      x-mcp-risk: read
+      x-required-scopes:
+      - onboarding:applications.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonCodeList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /onboarding/applications/{application_id}/acquirer-pack:
+    get:
+      operationId: getAcquirerPack
+      summary: Get acquirer pack
+      tags:
+      - Onboarding
+      description: Available only after approval. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: application_id
+        in: path
+        required: true
+        schema:
+          type: string
+      x-mcp-risk: read
+      x-required-scopes:
+      - onboarding:packs.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcquirerPack'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /onboarding/applications/{application_id}/acquirer-pack/shares:
+    post:
+      operationId: shareAcquirerPack
+      summary: Share acquirer pack
+      tags:
+      - Onboarding
+      description: Expiring single-use link to a named acquirer. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: application_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - onboarding:packs.share
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - acquirer
+              additionalProperties: false
+              properties:
+                acquirer:
+                  type: string
+                expires_in_seconds:
+                  type: integer
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcquirerPackShare'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/rules:
+    post:
+      operationId: createRule
+      summary: Create rule
+      tags:
+      - Compliance
+      description: Creates the rule and its version 1 as a draft. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - compliance:rules.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - typology
+              - definition
+              additionalProperties: false
+              properties:
+                name:
+                  type: string
+                  x-untrusted: true
+                typology:
+                  type: string
+                definition:
+                  type: object
+                metadata:
+                  $ref: '#/components/schemas/Metadata'
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    get:
+      operationId: listRules
+      summary: List rules
+      tags:
+      - Compliance
+      description: Filter by state and typology. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `state`.
+      - name: typology
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `typology`.
+      x-mcp-risk: read
+      x-required-scopes:
+      - compliance:rules.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/rules/{rule_id}:
+    get:
+      operationId: getRule
+      summary: Get rule
+      tags:
+      - Compliance
+      description: Includes the list of versions. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+      x-mcp-risk: read
+      x-required-scopes:
+      - compliance:rules.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/rules/{rule_id}/versions:
+    post:
+      operationId: createRuleVersion
+      summary: Create rule version
+      tags:
+      - Compliance
+      description: Versions are immutable. A change is always a new version. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - compliance:rules.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - definition
+              additionalProperties: false
+              properties:
+                definition:
+                  type: object
+                change_note:
+                  type: string
+                  x-untrusted: true
+                metadata:
+                  $ref: '#/components/schemas/Metadata'
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleVersion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/rules/{rule_id}/versions/{version}/backtests:
+    post:
+      operationId: runBacktest
+      summary: Run backtest
+      tags:
+      - Compliance
+      description: Runs asynchronously over a historic window. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - compliance:backtests.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - from
+              - to
+              additionalProperties: false
+              properties:
+                from:
+                  type: string
+                  format: date-time
+                to:
+                  type: string
+                  format: date-time
+      responses:
+        '202':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Backtest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/backtests/{backtest_id}:
+    get:
+      operationId: getBacktest
+      summary: Get backtest
+      tags:
+      - Compliance
+      description: Alert volume, precision against labelled history, difference from the active version.
+      parameters:
+      - name: backtest_id
+        in: path
+        required: true
+        schema:
+          type: string
+      x-mcp-risk: read
+      x-required-scopes:
+      - compliance:rules.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Backtest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/rules/{rule_id}/versions/{version}/activation:
+    post:
+      operationId: activateRuleVersion
+      summary: Activate rule version
+      tags:
+      - Compliance
+      description: Human compliance officer only. Needs a finished backtest and a second person. Only an authenticated human user with the required
+        role can call this; service and agent credentials are refused with `human_actor_required`. A reason code is required and the decision
+        cannot be changed.
+      parameters:
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: decision-recording
+      x-required-scopes:
+      - compliance:rules.activate
+      x-required-actor: user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason_code
+              - backtest
+              additionalProperties: false
+              properties:
+                reason_code:
+                  type: string
+                backtest:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleVersion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+      x-required-roles:
+      - compliance_officer
+  /compliance/rules/{rule_id}/versions/{version}/deactivation:
+    post:
+      operationId: deactivateRuleVersion
+      summary: Deactivate rule version
+      tags:
+      - Compliance
+      description: Human only, reason code required. Only an authenticated human user with the required role can call this; service and agent
+        credentials are refused with `human_actor_required`. A reason code is required and the decision cannot be changed.
+      parameters:
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: decision-recording
+      x-required-scopes:
+      - compliance:rules.activate
+      x-required-actor: user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason_code
+              additionalProperties: false
+              properties:
+                reason_code:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleVersion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+      x-required-roles:
+      - compliance_officer
+  /compliance/transactions:
+    post:
+      operationId: ingestTransactions
+      summary: Ingest transactions
+      tags:
+      - Compliance
+      description: Batch up to 500, amounts in minor units. Returns 202; alerts arrive by webhook. Amounts are integers in minor units with an
+        ISO 4217 currency code.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - compliance:transactions.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - transactions
+              additionalProperties: false
+              properties:
+                transactions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Transaction'
+      responses:
+        '202':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionBatch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/alerts:
+    get:
+      operationId: listAlerts
+      summary: List alerts
+      tags:
+      - Compliance
+      description: Filter by rule, state, severity. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: rule
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `rule`.
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `state`.
+      - name: severity
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `severity`.
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - compliance:alerts.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/alerts/{alert_id}:
+    get:
+      operationId: getAlert
+      summary: Get alert
+      tags:
+      - Compliance
+      description: Shows the rule version that fired and the data it saw. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: alert_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - compliance:alerts.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/alerts/{alert_id}/disposition:
+    post:
+      operationId: dispositionAlert
+      summary: Disposition alert
+      tags:
+      - Compliance
+      description: 'Human analyst only: false positive, escalate, or close. Reason code required. Only an authenticated human user with the required
+        role can call this; service and agent credentials are refused with `human_actor_required`. A reason code is required and the decision
+        cannot be changed.'
+      parameters:
+      - name: alert_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: decision-recording
+      x-required-scopes:
+      - compliance:alerts.decide
+      x-required-actor: user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason_code
+              - outcome
+              additionalProperties: false
+              properties:
+                outcome:
+                  type: string
+                  enum:
+                  - false_positive
+                  - escalate
+                  - close
+                reason_code:
+                  type: string
+                note:
+                  type: string
+                  x-untrusted: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+      x-required-roles:
+      - analyst
+  /compliance/cases:
+    post:
+      operationId: openCase
+      summary: Open case
+      tags:
+      - Compliance
+      description: Opens a case from one or more alerts. An agent may open one. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - compliance:cases.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - alerts
+              additionalProperties: false
+              properties:
+                alerts:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    get:
+      operationId: listCases
+      summary: List cases
+      tags:
+      - Compliance
+      description: Filter by state and owner. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `state`.
+      - name: owner
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `owner`.
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - compliance:cases.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/cases/{case_id}:
+    get:
+      operationId: getCase
+      summary: Get case
+      tags:
+      - Compliance
+      description: Alerts, notes and decisions in order. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: case_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - compliance:cases.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/cases/{case_id}/notes:
+    post:
+      operationId: addCaseNote
+      summary: Add case note
+      tags:
+      - Compliance
+      description: Free text is untrusted. Visible to the caller tenant and the tenants below it. Visible to the caller tenant and the tenants
+        below it. Free text in the request is treated as untrusted data.
+      parameters:
+      - name: case_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - compliance:cases.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - body
+              additionalProperties: false
+              properties:
+                body:
+                  type: string
+                  x-untrusted: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseNote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/cases/{case_id}/decision:
+    post:
+      operationId: decideCase
+      summary: Decide case
+      tags:
+      - Compliance
+      description: 'Human MLRO only: close, escalate, or file a report. Filing needs a second person. Only an authenticated human user with the
+        required role can call this; service and agent credentials are refused with `human_actor_required`. A reason code is required and the
+        decision cannot be changed.'
+      parameters:
+      - name: case_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: decision-recording
+      x-required-scopes:
+      - compliance:cases.decide
+      x-required-actor: user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason_code
+              - outcome
+              additionalProperties: false
+              properties:
+                outcome:
+                  type: string
+                  enum:
+                  - close
+                  - escalate
+                  - file_report
+                reason_code:
+                  type: string
+                note:
+                  type: string
+                  x-untrusted: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+      x-required-roles:
+      - mlro
+  /compliance/cases/{case_id}/evidence-bundles:
+    post:
+      operationId: createEvidenceBundle
+      summary: Create evidence bundle
+      tags:
+      - Compliance
+      description: Collects alerts, rule versions in force, decisions and audit extract into a hash-chained bundle.
+      parameters:
+      - name: case_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - compliance:evidence.write
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceBundle'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/evidence-bundles/{bundle_id}:
+    get:
+      operationId: getEvidenceBundle
+      summary: Get evidence bundle
+      tags:
+      - Compliance
+      description: Returns the bundle and its root hash. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: bundle_id
+        in: path
+        required: true
+        schema:
+          type: string
+      x-mcp-risk: read
+      x-required-scopes:
+      - compliance:evidence.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceBundle'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/evidence-bundles/{bundle_id}/verification:
+    get:
+      operationId: verifyEvidenceBundle
+      summary: Verify evidence bundle
+      tags:
+      - Compliance
+      description: Recomputes the chain and names the first broken item. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: bundle_id
+        in: path
+        required: true
+        schema:
+          type: string
+      x-mcp-risk: read
+      x-required-scopes:
+      - compliance:evidence.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceVerification'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/cases/{case_id}/exports:
+    post:
+      operationId: createGoamlExport
+      summary: Create goaml export
+      tags:
+      - Compliance
+      description: Builds a goAML-formatted file for review. The API never submits it to the regulator.
+      parameters:
+      - name: case_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - compliance:exports.write
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoamlExport'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /compliance/exports/{export_id}:
+    get:
+      operationId: getGoamlExport
+      summary: Get goaml export
+      tags:
+      - Compliance
+      description: Download the file and its validation result. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: export_id
+        in: path
+        required: true
+        schema:
+          type: string
+      x-mcp-risk: read
+      x-required-scopes:
+      - compliance:exports.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoamlExport'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/keys:
+    post:
+      operationId: createKey
+      summary: Create key
+      tags:
+      - Quantum-safe cards
+      description: Hybrid key pair, either for encryption (ML-KEM-768 + X25519) or signing (ML-DSA + ECDSA). Private keys never leave the QSS
+        service.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - qss:keys.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - purpose
+              additionalProperties: false
+              properties:
+                purpose:
+                  type: string
+                  enum:
+                  - encryption
+                  - signing
+                metadata:
+                  $ref: '#/components/schemas/Metadata'
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Key'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    get:
+      operationId: listKeys
+      summary: List keys
+      tags:
+      - Quantum-safe cards
+      description: Public parts and status only. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: purpose
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `purpose`.
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `status`.
+      x-mcp-risk: read
+      x-required-scopes:
+      - qss:keys.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/keys/{key_id}:
+    get:
+      operationId: getKey
+      summary: Get key
+      tags:
+      - Quantum-safe cards
+      description: Public parts and status only. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+      x-mcp-risk: read
+      x-required-scopes:
+      - qss:keys.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Key'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/keys/{key_id}/rotation:
+    post:
+      operationId: rotateKey
+      summary: Rotate key
+      tags:
+      - Quantum-safe cards
+      description: The old key keeps verifying and opening until retired. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - qss:keys.write
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Key'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/keys/{key_id}/revocation:
+    post:
+      operationId: revokeKey
+      summary: Revoke key
+      tags:
+      - Quantum-safe cards
+      description: Human security officer only. Cannot be undone. Only an authenticated human user with the required role can call this; service
+        and agent credentials are refused with `human_actor_required`. A reason code is required and the decision cannot be changed.
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: decision-recording
+      x-required-scopes:
+      - qss:keys.revoke
+      x-required-actor: user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason_code
+              additionalProperties: false
+              properties:
+                reason_code:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Key'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+      x-required-roles:
+      - security_officer
+  /qss/envelopes:
+    post:
+      operationId: sealEnvelope
+      summary: Seal envelope
+      tags:
+      - Quantum-safe cards
+      description: Encrypts a payload to a recipient key (envelope v2). Synthetic card numbers only in the sandbox. Amounts are integers in minor
+        units with an ISO 4217 currency code.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - qss:envelopes.seal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - recipient_key
+              - payload
+              additionalProperties: false
+              properties:
+                recipient_key:
+                  type: string
+                payload:
+                  type: string
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/envelopes/opening:
+    post:
+      operationId: openEnvelope
+      summary: Open envelope
+      tags:
+      - Quantum-safe cards
+      description: Releases the plaintext. Agents are blocked outright. Needs the PCI decision below. This operation can move money or release
+        card data. Agents are subject to mandate limits and some are blocked outright. Amounts are integers in minor units with an ISO 4217 currency
+        code.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: money-moving
+      x-required-scopes:
+      - qss:envelopes.open
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - envelope
+              additionalProperties: false
+              properties:
+                envelope:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeOpening'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/signatures:
+    post:
+      operationId: signPayload
+      summary: Sign payload
+      tags:
+      - Quantum-safe cards
+      description: Composite signature with a required domain label. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - qss:signatures.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - key
+              - domain
+              - payload
+              additionalProperties: false
+              properties:
+                key:
+                  type: string
+                domain:
+                  type: string
+                payload:
+                  type: string
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Signature'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/signatures/verification:
+    post:
+      operationId: verifySignature
+      summary: Verify signature
+      tags:
+      - Quantum-safe cards
+      description: Both signatures must verify. Safe to repeat, no idempotency key needed. Visible to the caller tenant and the tenants below
+        it.
+      parameters: []
+      x-mcp-risk: write
+      x-required-scopes:
+      - qss:signatures.read
+      x-idempotency-exempt: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - key
+              - domain
+              - payload
+              - signature
+              additionalProperties: false
+              properties:
+                key:
+                  type: string
+                domain:
+                  type: string
+                payload:
+                  type: string
+                signature:
+                  type: object
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignatureVerification'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/agent-tokens:
+    post:
+      operationId: issueAgentToken
+      summary: Issue agent token
+      tags:
+      - Quantum-safe cards
+      description: Human only. Short-lived, bound to one mandate. Only an authenticated human user with the required role can call this; service
+        and agent credentials are refused with `human_actor_required`. A reason code is required and the decision cannot be changed.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: decision-recording
+      x-required-scopes:
+      - qss:agents.issue
+      x-required-actor: user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - mandate
+              additionalProperties: false
+              properties:
+                mandate:
+                  type: string
+                ttl_seconds:
+                  type: integer
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentTokenIssued'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+      x-required-roles:
+      - security_officer
+    get:
+      operationId: listAgentTokens
+      summary: List agent tokens
+      tags:
+      - Quantum-safe cards
+      description: Never returns the token value. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `status`.
+      x-mcp-risk: read
+      x-required-scopes:
+      - qss:agents.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentTokenList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/agent-tokens/{token_id}/revocation:
+    post:
+      operationId: revokeAgentToken
+      summary: Revoke agent token
+      tags:
+      - Quantum-safe cards
+      description: Takes effect at once. Reducing authority is never gated. Visible to the caller tenant and the tenants below it.
+      parameters:
+      - name: token_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - qss:agents.issue
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentToken'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/mandates:
+    post:
+      operationId: createMandate
+      summary: Create mandate
+      tags:
+      - Quantum-safe cards
+      description: Human only. Limits per payment and per period, allowed merchant categories, currency, expiry. Signed with a composite signature.
+        Only an authenticated human user with the required role can call this; service and agent credentials are refused with `human_actor_required`.
+        A reason code is required and the decision cannot be changed. Amounts are integers in minor units with an ISO 4217 currency code.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: decision-recording
+      x-required-scopes:
+      - qss:mandates.issue
+      x-required-actor: user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - card
+              - limits
+              - allowed_mcc
+              - currency
+              - expires_at
+              additionalProperties: false
+              properties:
+                card:
+                  type: string
+                limits:
+                  $ref: '#/components/schemas/MandateLimits'
+                allowed_mcc:
+                  type: array
+                  items:
+                    type: string
+                currency:
+                  type: string
+                expires_at:
+                  type: string
+                  format: date-time
+                metadata:
+                  $ref: '#/components/schemas/Metadata'
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mandate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+      x-required-roles:
+      - security_officer
+    get:
+      operationId: listMandates
+      summary: List mandates
+      tags:
+      - Quantum-safe cards
+      description: Filter by state and card. Amounts are integers in minor units with an ISO 4217 currency code.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/StartingAfter'
+      - $ref: '#/components/parameters/EndingBefore'
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `status`.
+      - name: card
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Only objects matching this `card`.
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - qss:mandates.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MandateList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/mandates/{mandate_id}:
+    get:
+      operationId: getMandate
+      summary: Get mandate
+      tags:
+      - Quantum-safe cards
+      description: Terms, signature and usage so far. Amounts are integers in minor units with an ISO 4217 currency code.
+      parameters:
+      - name: mandate_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Expand'
+      x-mcp-risk: read
+      x-required-scopes:
+      - qss:mandates.read
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mandate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/mandates/{mandate_id}/revocation:
+    post:
+      operationId: revokeMandate
+      summary: Revoke mandate
+      tags:
+      - Quantum-safe cards
+      description: Immediate. Reducing authority is never gated. Amounts are integers in minor units with an ISO 4217 currency code.
+      parameters:
+      - name: mandate_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: write
+      x-required-scopes:
+      - qss:mandates.write
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mandate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /qss/mandates/{mandate_id}/authorizations:
+    post:
+      operationId: authorizePayment
+      summary: Authorize payment
+      tags:
+      - Quantum-safe cards
+      description: An agent presents its token and an intended payment. Returns a signed authorization or a denial with the reason. This operation
+        can move money or release card data. Agents are subject to mandate limits and some are blocked outright. Amounts are integers in minor
+        units with an ISO 4217 currency code.
+      parameters:
+      - name: mandate_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      x-mcp-risk: money-moving
+      x-required-scopes:
+      - qss:mandates.authorize
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - agent_token
+              - amount
+              - currency
+              - merchant_category
+              additionalProperties: false
+              properties:
+                agent_token:
+                  type: string
+                amount:
+                  type: integer
+                currency:
+                  type: string
+                merchant_category:
+                  type: string
+                merchant:
+                  type: string
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Authorization'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: OAuth 2.0 client credentials. Sandbox and live credentials are separate. Restricted API keys (`mb_rk_test_...`, `mb_rk_live_...`)
+        are planned for merchant-only integrations.
+      flows:
+        clientCredentials:
+          tokenUrl: https://sandbox.api.moneybee.world/v1/oauth/token
+          scopes:
+            public (client credentials): ''
+            audit:read: ''
+            webhooks:write: ''
+            webhooks:read: ''
+            events:read: ''
+            events:replay: ''
+            approvals:read: ''
+            approvals:decide: ''
+            onboarding:applications.write: ''
+            onboarding:applications.read: ''
+            onboarding:documents.write: ''
+            onboarding:analysis.read: ''
+            onboarding:decisions.write: ''
+            onboarding:packs.read: ''
+            onboarding:packs.share: ''
+            compliance:rules.write: ''
+            compliance:rules.read: ''
+            compliance:backtests.write: ''
+            compliance:rules.activate: ''
+            compliance:transactions.write: ''
+            compliance:alerts.read: ''
+            compliance:alerts.decide: ''
+            compliance:cases.write: ''
+            compliance:cases.read: ''
+            compliance:cases.decide: ''
+            compliance:evidence.write: ''
+            compliance:evidence.read: ''
+            compliance:exports.write: ''
+            compliance:exports.read: ''
+            qss:keys.write: ''
+            qss:keys.read: ''
+            qss:keys.revoke: ''
+            qss:envelopes.seal: ''
+            qss:envelopes.open: ''
+            qss:signatures.write: ''
+            qss:signatures.read: ''
+            qss:agents.issue: ''
+            qss:agents.read: ''
+            qss:mandates.issue: ''
+            qss:mandates.read: ''
+            qss:mandates.write: ''
+            qss:mandates.authorize: ''
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+      description: Page size, 1 to 100.
+    StartingAfter:
+      name: starting_after
+      in: query
+      schema:
+        type: string
+      description: An object id. Returns objects after it. Use the last id of the previous page.
+    EndingBefore:
+      name: ending_before
+      in: query
+      schema:
+        type: string
+      description: An object id. Returns objects before it. Use the first id of the current page to go back.
+    Expand:
+      name: expand[]
+      in: query
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+      description: Replace these related ids with the full object. Up to 4 levels.
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 255
+      description: Unique key per logical request. Retries with the same key and body replay the first response for 24 hours.
+  responses:
+    BadRequest:
+      description: The request could not be understood.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthenticated:
+      description: Missing or invalid bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: The credential lacks the scope, role or actor type this call needs.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: No such object for this tenant.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Idempotency key conflict, request in progress, or state conflict.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationFailed:
+      description: The body or parameters failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimited:
+      description: Too many requests. See the RateLimit headers.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Something went wrong on our side. Safe to retry with the same Idempotency-Key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Metadata:
+      type: object
+      maxProperties: 50
+      additionalProperties:
+        type: string
+        maxLength: 500
+      description: Up to 50 string key-value pairs you can attach to an object. Keys up to 40 characters. Never put card numbers or personal data
+        here.
+    Actor:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - user
+          - service
+          - agent
+        id:
+          type: string
+      additionalProperties: false
+    Decision:
+      type: object
+      properties:
+        outcome:
+          type: string
+        reason_code:
+          type: string
+        note:
+          type:
+          - string
+          - 'null'
+          x-untrusted: true
+        decided_by:
+          $ref: '#/components/schemas/Actor'
+        decided_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    ApprovalSubject:
+      type: object
+      properties:
+        operation:
+          type: string
+        resource:
+          type: string
+      additionalProperties: false
+    EventRequest:
+      type: object
+      properties:
+        id:
+          type:
+          - string
+          - 'null'
+        idempotency_key:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+    MerchantInput:
+      type: object
+      properties:
+        legal_name:
+          type: string
+          x-untrusted: true
+        country:
+          type: string
+        registration_number:
+          type: string
+        website:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+    Entity:
+      type: object
+      properties:
+        name:
+          type: string
+          x-untrusted: true
+        role:
+          type: string
+        country:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+    SourceLink:
+      type: object
+      properties:
+        document:
+          type: string
+        page:
+          type: integer
+      additionalProperties: false
+    DateWindow:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+      additionalProperties: false
+    MandateLimits:
+      type: object
+      properties:
+        per_payment:
+          type: integer
+        per_period:
+          type: integer
+        period:
+          type: string
+          enum:
+          - day
+          - week
+          - month
+      additionalProperties: false
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        counterparty:
+          type: string
+      additionalProperties: false
+    Deleted:
+      type: object
+      required:
+      - id
+      - object
+      - deleted
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+        deleted:
+          const: true
+    CurrentContext:
+      type: object
+      required:
+      - object
+      - tenant
+      - actor
+      - scopes
+      - livemode
+      properties:
+        object:
+          const: context
+        tenant:
+          type: object
+        actor:
+          $ref: '#/components/schemas/Actor'
+        scopes:
+          type: array
+          items:
+            type: string
+        livemode:
+          type: boolean
+    AuditChainVerification:
+      type: object
+      required:
+      - object
+      - valid
+      properties:
+        object:
+          const: audit_chain_verification
+        valid:
+          type: boolean
+        checked:
+          type: integer
+        first_broken_event:
+          type:
+          - string
+          - 'null'
+    Approval:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^apr_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `apr_`.
+        object:
+          const: approval
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        status:
+          type: string
+          enum:
+          - pending
+          - approved
+          - declined
+          - expired
+        subject:
+          $ref: '#/components/schemas/ApprovalSubject'
+        requested_by:
+          $ref: '#/components/schemas/Actor'
+        decided_by:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/Actor'
+        reason_code:
+          type:
+          - string
+          - 'null'
+        expires_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+      x-expandable:
+      - subject
+      x-object: approval
+    ApprovalList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Approval'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    WebhookEndpoint:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^we_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `we_`.
+        object:
+          const: webhook_endpoint
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        url:
+          type: string
+        events:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum:
+          - enabled
+          - disabled
+        description:
+          type:
+          - string
+          - 'null'
+          x-untrusted: true
+      additionalProperties: false
+      x-object: webhook_endpoint
+    WebhookEndpointList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookEndpoint'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    Event:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      properties:
+        id:
+          type: string
+          pattern: ^evt_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `evt_`.
+        object:
+          const: event
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        type:
+          type: string
+        api_version:
+          type: string
+        data:
+          type: object
+          required:
+          - object
+          properties:
+            object:
+              type: object
+              description: The resource as it was when the event happened.
+        request:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/EventRequest'
+        tenant_id:
+          type: string
+      additionalProperties: false
+      x-object: event
+    EventList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    WebhookDelivery:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      properties:
+        id:
+          type: string
+          pattern: ^whd_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `whd_`.
+        object:
+          const: webhook_delivery
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        event:
+          type: string
+        endpoint:
+          type: string
+        status:
+          type: string
+          enum:
+          - pending
+          - succeeded
+          - failed
+        attempts:
+          type: integer
+        next_attempt_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        response_code:
+          type:
+          - integer
+          - 'null'
+      additionalProperties: false
+      x-object: webhook_delivery
+    WebhookDeliveryList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDelivery'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    AuditEvent:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      properties:
+        id:
+          type: string
+          pattern: ^aud_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `aud_`.
+        object:
+          const: audit_event
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        action:
+          type: string
+        actor:
+          $ref: '#/components/schemas/Actor'
+        outcome:
+          type: string
+          enum:
+          - allowed
+          - denied
+        hash:
+          type: string
+        previous_hash:
+          type:
+          - string
+          - 'null'
+        tenant_id:
+          type: string
+      additionalProperties: false
+      x-object: audit_event
+    AuditEventList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    Application:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^app_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `app_`.
+        object:
+          const: application
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        state:
+          type: string
+          enum:
+          - draft
+          - submitted
+          - analysing
+          - analysis_ready
+          - information_requested
+          - decided
+        merchant:
+          $ref: '#/components/schemas/MerchantInput'
+        risk_band:
+          type:
+          - string
+          - 'null'
+          enum:
+          - low
+          - medium
+          - high
+          - null
+        decision:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/Decision'
+        documents:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      x-expandable:
+      - documents
+      x-object: application
+    ApplicationList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Application'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    Document:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^doc_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `doc_`.
+        object:
+          const: document
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        application:
+          type: string
+        type:
+          type: string
+          enum:
+          - licence
+          - id
+          - proof_of_address
+          - ownership
+          - bank_statement
+          - other
+        filename:
+          type: string
+        scan_status:
+          type: string
+          enum:
+          - pending
+          - clean
+          - rejected
+        extraction_status:
+          type: string
+          enum:
+          - pending
+          - done
+          - failed
+      additionalProperties: false
+      x-object: document
+    DocumentList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    Analysis:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^ana_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `ana_`.
+        object:
+          const: analysis
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        application:
+          type: string
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entity'
+        ownership_graph:
+          type: object
+        risk_band:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+        reason_codes:
+          type: array
+          items:
+            type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceLink'
+        screening_mode:
+          type: string
+          enum:
+          - mock
+          - live
+      additionalProperties: false
+      x-expandable:
+      - application
+      x-object: analysis
+    InformationRequest:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^inr_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `inr_`.
+        object:
+          const: information_request
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        application:
+          type: string
+        message:
+          type: string
+          x-untrusted: true
+        requested_by:
+          $ref: '#/components/schemas/Actor'
+        status:
+          type: string
+          enum:
+          - open
+          - answered
+      additionalProperties: false
+      x-object: information_request
+    ReasonCode:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      properties:
+        id:
+          type: string
+          pattern: ^rsn_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `rsn_`.
+        object:
+          const: reason_code
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        code:
+          type: string
+        applies_to:
+          type: string
+        meaning:
+          type: string
+          x-untrusted: true
+      additionalProperties: false
+      x-object: reason_code
+    ReasonCodeList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReasonCode'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    AcquirerPack:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^pck_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `pck_`.
+        object:
+          const: acquirer_pack
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        application:
+          type: string
+        status:
+          type: string
+          enum:
+          - ready
+        files:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      x-object: acquirer_pack
+    AcquirerPackShare:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^shr_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `shr_`.
+        object:
+          const: acquirer_pack_share
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        pack:
+          type: string
+        acquirer:
+          type: string
+        url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        used:
+          type: boolean
+      additionalProperties: false
+      x-object: acquirer_pack_share
+    Rule:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^rul_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `rul_`.
+        object:
+          const: rule
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        name:
+          type: string
+          x-untrusted: true
+        typology:
+          type: string
+        state:
+          type: string
+          enum:
+          - draft
+          - active
+          - inactive
+        active_version:
+          type:
+          - integer
+          - 'null'
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleVersion'
+      additionalProperties: false
+      x-object: rule
+    RuleList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rule'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    RuleVersion:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^rv_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `rv_`.
+        object:
+          const: rule_version
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        rule:
+          type: string
+        version:
+          type: integer
+        definition:
+          type: object
+        state:
+          type: string
+          enum:
+          - draft
+          - tested
+          - active
+          - inactive
+        hash:
+          type: string
+      additionalProperties: false
+      x-object: rule_version
+    Backtest:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^bkt_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `bkt_`.
+        object:
+          const: backtest
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        rule:
+          type: string
+        version:
+          type: integer
+        status:
+          type: string
+          enum:
+          - queued
+          - running
+          - completed
+          - failed
+        window:
+          $ref: '#/components/schemas/DateWindow'
+        alert_count:
+          type:
+          - integer
+          - 'null'
+        precision:
+          type:
+          - number
+          - 'null'
+        diff_vs_active:
+          type:
+          - object
+          - 'null'
+      additionalProperties: false
+      x-object: backtest
+    TransactionBatch:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      properties:
+        id:
+          type: string
+          pattern: ^txb_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `txb_`.
+        object:
+          const: transaction_batch
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        accepted:
+          type: integer
+        status:
+          type: string
+          enum:
+          - accepted
+      additionalProperties: false
+      x-object: transaction_batch
+    Alert:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^alt_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `alt_`.
+        object:
+          const: alert
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        rule:
+          type: string
+        rule_version:
+          type: integer
+        severity:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          - critical
+        state:
+          type: string
+          enum:
+          - open
+          - dispositioned
+          - in_case
+        data_seen:
+          type: object
+        disposition:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/Decision'
+      additionalProperties: false
+      x-expandable:
+      - rule
+      x-object: alert
+    AlertList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    Case:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^cas_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `cas_`.
+        object:
+          const: case
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        state:
+          type: string
+          enum:
+          - open
+          - escalated
+          - closed
+          - reported
+        alerts:
+          type: array
+          items:
+            type: string
+        owner:
+          type:
+          - string
+          - 'null'
+        notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseNote'
+          x-untrusted: true
+        decision:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/Decision'
+      additionalProperties: false
+      x-expandable:
+      - alerts
+      x-object: case
+    CaseList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Case'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    CaseNote:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^nte_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `nte_`.
+        object:
+          const: case_note
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        case:
+          type: string
+        body:
+          type: string
+          x-untrusted: true
+        author:
+          $ref: '#/components/schemas/Actor'
+      additionalProperties: false
+      x-object: case_note
+    EvidenceBundle:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^evb_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `evb_`.
+        object:
+          const: evidence_bundle
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        case:
+          type: string
+        root_hash:
+          type: string
+        items:
+          type: integer
+        status:
+          type: string
+          enum:
+          - building
+          - ready
+      additionalProperties: false
+      x-object: evidence_bundle
+    EvidenceVerification:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      properties:
+        id:
+          type: string
+          pattern: ^evv_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `evv_`.
+        object:
+          const: evidence_verification
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        bundle:
+          type: string
+        valid:
+          type: boolean
+        first_broken_item:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+      x-object: evidence_verification
+    GoamlExport:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^gex_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `gex_`.
+        object:
+          const: goaml_export
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        case:
+          type: string
+        status:
+          type: string
+          enum:
+          - building
+          - ready
+          - failed
+        file_url:
+          type:
+          - string
+          - 'null'
+        validation:
+          type:
+          - object
+          - 'null'
+        submitted:
+          type: boolean
+      additionalProperties: false
+      x-object: goaml_export
+    Key:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^key_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `key_`.
+        object:
+          const: key
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        purpose:
+          type: string
+          enum:
+          - encryption
+          - signing
+        algorithms:
+          type: array
+          items:
+            type: string
+        public_key:
+          type: object
+        status:
+          type: string
+          enum:
+          - active
+          - retiring
+          - revoked
+      additionalProperties: false
+      x-object: key
+    KeyList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Key'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    Envelope:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      properties:
+        id:
+          type: string
+          pattern: ^env_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `env_`.
+        object:
+          const: envelope
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        recipient_key:
+          type: string
+        ciphertext:
+          type: string
+        version:
+          type: integer
+      additionalProperties: false
+      x-object: envelope
+    EnvelopeOpening:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      properties:
+        id:
+          type: string
+          pattern: ^eop_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `eop_`.
+        object:
+          const: envelope_opening
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        envelope:
+          type: string
+        plaintext:
+          type: string
+      additionalProperties: false
+      x-object: envelope_opening
+    Signature:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^sig_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `sig_`.
+        object:
+          const: signature
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        key:
+          type: string
+        domain:
+          type: string
+        signature:
+          type: object
+      additionalProperties: false
+      x-object: signature
+    SignatureVerification:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      properties:
+        id:
+          type: string
+          pattern: ^sgv_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `sgv_`.
+        object:
+          const: signature_verification
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        valid:
+          type: boolean
+        classical_valid:
+          type: boolean
+        post_quantum_valid:
+          type: boolean
+      additionalProperties: false
+      x-object: signature_verification
+    AgentToken:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^atk_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `atk_`.
+        object:
+          const: agent_token
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        mandate:
+          type: string
+        status:
+          type: string
+          enum:
+          - active
+          - revoked
+          - expired
+        expires_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+      x-object: agent_token
+    AgentTokenList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentToken'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    AgentTokenIssued:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^atk_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `atk_`.
+        object:
+          const: agent_token_issued
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        mandate:
+          type: string
+        status:
+          type: string
+          enum:
+          - active
+        expires_at:
+          type: string
+          format: date-time
+        token:
+          type: string
+      additionalProperties: false
+      x-object: agent_token_issued
+    Mandate:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^mnd_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `mnd_`.
+        object:
+          const: mandate
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        card:
+          type: string
+        limits:
+          $ref: '#/components/schemas/MandateLimits'
+        allowed_mcc:
+          type: array
+          items:
+            type: string
+        currency:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+          - active
+          - revoked
+          - expired
+        used_minor:
+          type: integer
+        signature:
+          type: object
+      additionalProperties: false
+      x-expandable:
+      - card
+      x-object: mandate
+    MandateList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - url
+      additionalProperties: false
+      properties:
+        object:
+          const: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mandate'
+        has_more:
+          type: boolean
+          description: True if there are more objects after this page. Pass the last id as `starting_after`.
+        url:
+          type: string
+    Authorization:
+      type: object
+      required:
+      - id
+      - object
+      - livemode
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          pattern: ^aut_[A-Za-z0-9]+$
+          description: Unique identifier, prefixed `aut_`.
+        object:
+          const: authorization
+          description: String naming the resource type.
+        livemode:
+          type: boolean
+          description: False for sandbox objects. Sandbox and live data never mix.
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        mandate:
+          type: string
+        outcome:
+          type: string
+          enum:
+          - granted
+          - denied
+        amount:
+          type: integer
+        currency:
+          type: string
+        denial_reason:
+          type:
+          - string
+          - 'null'
+        signature:
+          type:
+          - object
+          - 'null'
+      additionalProperties: false
+      x-object: authorization
+    Error:
+      type: object
+      required:
+      - error
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          required:
+          - type
+          - code
+          - message
+          - request_id
+          - doc_url
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+              enum:
+              - invalid_request_error
+              - authentication_error
+              - permission_error
+              - rate_limit_error
+              - idempotency_error
+              - api_error
+              description: Broad class of error. Handle on this first, then on `code`.
+            code:
+              type: string
+              description: Stable machine-readable code. See the error catalogue.
+            message:
+              type: string
+              x-untrusted: true
+            param:
+              type:
+              - string
+              - 'null'
+              description: The request field that caused the error, when there is one.
+            request_id:
+              type: string
+            doc_url:
+              type: string
+              format: uri
+            details:
+              type: array
+              items:
+                type: object
+                required:
+                - field
+                - code
+                - message
+                properties:
+                  field:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                    x-untrusted: true
+    OAuthTokenRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+          enum:
+          - client_credentials
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        scope:
+          type: string
+      additionalProperties: false
+    OAuthTokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum:
+          - Bearer
+        expires_in:
+          type: integer
+        scope:
+          type: string
+      additionalProperties: false
+    OAuthError:
+      type: object
+      properties:
+        error:
+          type: string
+        error_description:
+          type: string
+      additionalProperties: false
+      required:
+      - error
+webhooks:
+  webhook.ping:
+    post:
+      operationId: receiveWebhookPing
+      summary: Event webhook.ping
+      description: Sent when `webhook.ping` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  approval.requested:
+    post:
+      operationId: receiveApprovalRequested
+      summary: Event approval.requested
+      description: Sent when `approval.requested` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  approval.decided:
+    post:
+      operationId: receiveApprovalDecided
+      summary: Event approval.decided
+      description: Sent when `approval.decided` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  application.submitted:
+    post:
+      operationId: receiveApplicationSubmitted
+      summary: Event application.submitted
+      description: Sent when `application.submitted` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  application.analysis_ready:
+    post:
+      operationId: receiveApplicationAnalysisReady
+      summary: Event application.analysis_ready
+      description: Sent when `application.analysis_ready` happens in the endpoint tenant or a tenant below it. The body is an event object whose
+        `data.object` is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  application.information_requested:
+    post:
+      operationId: receiveApplicationInformationRequested
+      summary: Event application.information_requested
+      description: Sent when `application.information_requested` happens in the endpoint tenant or a tenant below it. The body is an event object
+        whose `data.object` is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  application.decided:
+    post:
+      operationId: receiveApplicationDecided
+      summary: Event application.decided
+      description: Sent when `application.decided` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  document.rejected:
+    post:
+      operationId: receiveDocumentRejected
+      summary: Event document.rejected
+      description: Sent when `document.rejected` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  pack.shared:
+    post:
+      operationId: receivePackShared
+      summary: Event pack.shared
+      description: Sent when `pack.shared` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  alert.created:
+    post:
+      operationId: receiveAlertCreated
+      summary: Event alert.created
+      description: Sent when `alert.created` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  alert.dispositioned:
+    post:
+      operationId: receiveAlertDispositioned
+      summary: Event alert.dispositioned
+      description: Sent when `alert.dispositioned` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  case.opened:
+    post:
+      operationId: receiveCaseOpened
+      summary: Event case.opened
+      description: Sent when `case.opened` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  case.decided:
+    post:
+      operationId: receiveCaseDecided
+      summary: Event case.decided
+      description: Sent when `case.decided` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  rule_version.activated:
+    post:
+      operationId: receiveRuleVersionActivated
+      summary: Event rule_version.activated
+      description: Sent when `rule_version.activated` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  backtest.completed:
+    post:
+      operationId: receiveBacktestCompleted
+      summary: Event backtest.completed
+      description: Sent when `backtest.completed` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  evidence_bundle.created:
+    post:
+      operationId: receiveEvidenceBundleCreated
+      summary: Event evidence_bundle.created
+      description: Sent when `evidence_bundle.created` happens in the endpoint tenant or a tenant below it. The body is an event object whose
+        `data.object` is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  export.ready:
+    post:
+      operationId: receiveExportReady
+      summary: Event export.ready
+      description: Sent when `export.ready` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  key.rotated:
+    post:
+      operationId: receiveKeyRotated
+      summary: Event key.rotated
+      description: Sent when `key.rotated` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  key.revoked:
+    post:
+      operationId: receiveKeyRevoked
+      summary: Event key.revoked
+      description: Sent when `key.revoked` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  mandate.created:
+    post:
+      operationId: receiveMandateCreated
+      summary: Event mandate.created
+      description: Sent when `mandate.created` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  mandate.revoked:
+    post:
+      operationId: receiveMandateRevoked
+      summary: Event mandate.revoked
+      description: Sent when `mandate.revoked` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  agent_token.issued:
+    post:
+      operationId: receiveAgentTokenIssued
+      summary: Event agent_token.issued
+      description: Sent when `agent_token.issued` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  authorization.granted:
+    post:
+      operationId: receiveAuthorizationGranted
+      summary: Event authorization.granted
+      description: Sent when `authorization.granted` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
+  authorization.denied:
+    post:
+      operationId: receiveAuthorizationDenied
+      summary: Event authorization.denied
+      description: Sent when `authorization.denied` happens in the endpoint tenant or a tenant below it. The body is an event object whose `data.object`
+        is the resource as it was at that moment.
+      tags:
+      - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Return any 2xx within 10 seconds to acknowledge.
+      x-event-version: 1
