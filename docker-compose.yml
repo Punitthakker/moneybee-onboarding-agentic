@@ -8,6 +8,8 @@ x-api-env: &api-env
   NODE_ENV: production
   PORT: "4000"
   PUBLIC_API_URL: "${PUBLIC_API_URL:-http://localhost:8080}"
+  # where merchants open the portal (magic links, UAE PASS return). Follows WEB_PORT; set DOCKER_PUBLIC_WEB_URL for a real domain.
+  PUBLIC_WEB_URL: "${DOCKER_PUBLIC_WEB_URL:-http://localhost:${WEB_PORT:-8080}}"
   CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:8080,http://localhost:5173}"
   STORE: mongo
   REPO: "${REPO:-mongo}"
