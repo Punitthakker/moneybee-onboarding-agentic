@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fromDoc, toDoc } from '../src/db/mongo-store';
+import { fromDoc, toDoc, withCaseDefaults } from '../src/db/mongo-store';
 
 /**
  * Working-store encoding. Case records hold dotted keys ("company.legalName") at several depths and
@@ -25,6 +25,16 @@ describe('mongo store encoding', () => {
     expect(JSON.stringify(d)).not.toMatch(/"[^"]*\.[^"]*":/);
     expect('skip' in d).toBe(false);
     expect(fromDoc(d)).toEqual({ ...sample, skip: undefined, id: 'c1' });
+  });
+});
+
+describe('older case records', () => {
+  it('get their missing lists and fields back on read', () => {
+    const c = withCaseDefaults(fromDoc({ _id: 'old', ref: 'BT-1', status: 'CLASSIFIED', documents: [{ id: 'd' }] }) as never)!;
+    expect(c.fields).toEqual({});
+    expect(c.files).toEqual([]);
+    expect(c.documents).toHaveLength(1);
+    expect(c.needsReviewFields).toEqual([]);
   });
 });
 

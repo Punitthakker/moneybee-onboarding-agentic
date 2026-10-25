@@ -36,6 +36,21 @@ export const fromDoc = <T>(d: Record<string, unknown> | null): T | null => {
   return { id: _id, ...(deepKeys(rest, decKey) as Record<string, unknown>) } as T;
 };
 
+/**
+ * Case records written before the store fix (Oct 2026) lost empty objects and arrays, for example "fields: {}".
+ * Reads fill those back in so older records never crash the API.
+ */
+export const withCaseDefaults = (c: CaseRec | null): CaseRec | null => {
+  if (!c) return c;
+  const x = c as CaseRec & Record<string, unknown>;
+  for (const k of ['files', 'documents', 'directors', 'shareholders', 'signatories', 'idHolders', 'findings', 'checklist', 'reviews', 'needsReviewFields'] as const) if (!Array.isArray(x[k])) (x as Record<string, unknown>)[k] = [];
+  if (!x.fields || typeof x.fields !== 'object') x.fields = {};
+  if (!x.usage) x.usage = { tokens: 0, budget: 0, calls: 0 };
+  if (typeof x.injectionSuspected !== 'boolean') x.injectionSuspected = false;
+  return c;
+};
+const caseFromDoc = (d: Record<string, unknown> | null) => withCaseDefaults(fromDoc<CaseRec>(d));
+
 export async function createMongoStore(url: string): Promise<Store> {
   await mongoose.connect(url, { serverSelectionTimeoutMS: 15000 });
   const Cases = loose('cases', [{ createdAt: -1 }, { status: 1 }, { tenantId: 1, createdAt: -1 }, { tenantId: 1, status: 1 }, { 'portal.contact.emailHash': 1 }]);
@@ -59,7 +74,7 @@ export async function createMongoStore(url: string): Promise<Store> {
         return c;
       },
       async get(id) {
-        return fromDoc<CaseRec>(await lean(Cases.findById(id).lean()));
+        return caseFromDoc(await lean(Cases.findById(id).lean()));
       },
       async list(f: CaseListFilter = {}) {
         const q: Record<string, unknown> = {};
@@ -73,11 +88,11 @@ export async function createMongoStore(url: string): Promise<Store> {
           q.$and = [{ $or: [{ name: re }, { ref: re }, { legalName: re }] }];
         }
         const rows = await lean<Record<string, unknown>[]>(Cases.find(q).sort({ createdAt: -1 }).limit(f.limit ?? 200).lean());
-        return rows.map((r) => fromDoc<CaseRec>(r)!);
+        return rows.map((r) => caseFromDoc(r)!);
       },
       async update(id, mutator) {
         for (let attempt = 0; attempt < 8; attempt++) {
-          const cur = fromDoc<CaseRec>(await lean(Cases.findById(id).lean()));
+          const cur = caseFromDoc(await lean(Cases.findById(id).lean()));
           if (!cur) throw new Error('Case not found');
           const draft = structuredClone(cur);
           await mutator(draft);
