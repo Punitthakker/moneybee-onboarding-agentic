@@ -23,8 +23,9 @@ COPY --from=build /app/apps/api/dist apps/api/dist
 COPY packages/shared packages/shared
 COPY db/migrations db/migrations
 COPY policies policies
+COPY tenants tenants
 COPY scripts/webhook-sink.mjs scripts/webhook-sink.mjs
-ENV MIGRATIONS_DIR=/app/db/migrations POLICIES_DIR=/app/policies
+ENV MIGRATIONS_DIR=/app/db/migrations POLICIES_DIR=/app/policies TENANTS_DIR=/app/tenants
 RUN mkdir -p /app/.data && chown -R node:node /app/.data
 USER node
 EXPOSE 4000

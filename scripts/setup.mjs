@@ -20,3 +20,4 @@ writeFileSync('.env', env, { mode: 0o600 });
 console.log('Created .env with fresh secrets.');
 console.log(`  admin:  admin@moneybee.local / ${admin}`);
 console.log(`  demo:   underwriter@ second@ viewer@moneybee.local / ${demo}`);
+console.log(`  botim:  admin@ underwriter@ second@ viewer@botim.local / ${demo}  (white-label tenant, open http://botim.localhost:8080)`);

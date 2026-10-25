@@ -26,7 +26,7 @@ export const api = {
 };
 
 export type Role = 'ADMIN' | 'UNDERWRITER' | 'SECOND_REVIEWER' | 'VIEWER';
-export interface Me { id: string; email: string; name: string; role: Role }
+export interface Me { id: string; email: string; name: string; role: Role; tenantId: string }
 export const can = {
   write: (u?: Me | null) => !!u && (u.role === 'ADMIN' || u.role === 'UNDERWRITER'),
   review: (u?: Me | null) => !!u && u.role !== 'VIEWER',

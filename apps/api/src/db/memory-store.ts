@@ -1,6 +1,8 @@
-import type { AuditRec, CaseListFilter, CaseRec, PolicySetRec, SettingsRec, Store, TraceRec, UserRec, WebhookDeliveryRec } from './types';
+import { DEFAULT_TENANT_ID } from '@moneybee/shared';
+import type { AuditRec, CaseListFilter, CaseRec, PolicySetRec, SettingsRec, Store, TenantRec, TraceRec, UserRec, WebhookDeliveryRec } from './types';
 
 const clone = <T>(v: T): T => structuredClone(v);
+const tenantOf = (r: { tenantId?: string }) => r.tenantId ?? DEFAULT_TENANT_ID;
 
 /** In-memory Store used for tests and for running without Mongo (STORE=memory). */
 export function createMemoryStore(): Store {
@@ -11,6 +13,7 @@ export function createMemoryStore(): Store {
   const policies: PolicySetRec[] = [];
   let settings: SettingsRec = {};
   const hooks = new Map<string, WebhookDeliveryRec>();
+  const tenants = new Map<string, TenantRec>();
   // Serialise updates per case so concurrent mutators do not interleave across awaits.
   const locks = new Map<string, Promise<unknown>>();
 
@@ -26,6 +29,7 @@ export function createMemoryStore(): Store {
       },
       async list(f: CaseListFilter = {}) {
         let a = Array.from(cases.values());
+        if (f.tenantId) a = a.filter((c) => tenantOf(c) === f.tenantId);
         if (f.status) a = a.filter((c) => c.status === f.status);
         if (f.entityType) a = a.filter((c) => (c.entityType ?? c.entityTypeRequested) === f.entityType);
         if (f.acquirer) a = a.filter((c) => c.acquirerCode === f.acquirer);
@@ -70,6 +74,7 @@ export function createMemoryStore(): Store {
       async list(f = {}) {
         let a = audit;
         if (f.entity) a = a.filter((x) => x.entity === f.entity);
+        if (f.tenantId) a = a.filter((x) => tenantOf(x) === f.tenantId);
         return clone(a.slice(-(f.limit ?? 200)).reverse());
       },
     },
@@ -93,8 +98,21 @@ export function createMemoryStore(): Store {
         users.set(id, n);
         return clone(n);
       },
+      async list(f = {}) {
+        const all = Array.from(users.values());
+        return clone(f.tenantId ? all.filter((u) => tenantOf(u) === f.tenantId) : all);
+      },
+    },
+    tenants: {
+      async get(id) {
+        const t = tenants.get(id);
+        return t ? clone(t) : null;
+      },
       async list() {
-        return clone(Array.from(users.values()));
+        return clone(Array.from(tenants.values()).sort((a, b) => a.id.localeCompare(b.id)));
+      },
+      async put(t) {
+        tenants.set(t.id, clone(t));
       },
     },
     policies: {

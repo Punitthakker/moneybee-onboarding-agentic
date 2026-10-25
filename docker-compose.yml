@@ -33,6 +33,9 @@ x-api-env: &api-env
   CASE_TOKEN_BUDGET: "${CASE_TOKEN_BUDGET:-400000}"
   SCREENING_PROVIDER: "${SCREENING_PROVIDER:-mock}"
   ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@moneybee.local}"
+  # tenants/*.json are loaded into Mongo on first boot (MoneyBee platform + Botim white-label)
+  SMTP_URL: "${SMTP_URL:-smtp://mailpit:1025}"
+  WATCHMAN_URL: "${WATCHMAN_URL:-http://watchman:8084}"
   ADMIN_PASSWORD: "${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env - run npm run setup}"
   SEED_DEMO_DATA: "${SEED_DEMO_DATA:-true}"
   DEMO_PASSWORD: "${DEMO_PASSWORD:-}"
@@ -91,6 +94,26 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  # Local mail catcher for the email channel (phase 4). Web UI http://localhost:8025, SMTP localhost:1025.
+  # Mailpit is the maintained successor of MailHog and speaks the same SMTP and web UI ports.
+  mailpit:
+    image: axllent/mailpit:v1.32.0
+    restart: unless-stopped
+    ports: ["127.0.0.1:8025:8025", "127.0.0.1:1025:1025"]
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+
+  # Self-hosted sanctions screening (moov-io/watchman, Apache-2.0). Downloads OFAC and other public lists on start.
+  # Wired into screening through the MoneyBee Risk API in phase 3; until then the MOCK provider stays active.
+  # Internal only: the API is unauthenticated by design, so it is bound to localhost and never exposed publicly.
+  watchman:
+    image: moov/watchman:v1.2.2
+    restart: unless-stopped
+    environment:
+      INCLUDED_LISTS: "${WATCHMAN_LISTS:-us_ofac}"
+    ports: ["127.0.0.1:8084:8084"]
 
   # Optional antivirus hook (see docs/SECURITY.md). Enable with: docker compose --profile av up
   clamav:

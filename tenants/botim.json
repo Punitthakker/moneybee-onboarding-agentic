@@ -1,0 +1,45 @@
+{
+  "id": "botim",
+  "name": "Botim",
+  "kind": "white_label",
+  "status": "active",
+  "casePrefix": "BT",
+  "hostnames": ["botim.localhost"],
+  "locales": ["en", "ar"],
+  "enabledEntityTypes": ["sole_establishment", "llc", "free_zone", "mainland"],
+  "branding": {
+    "displayName": "Botim",
+    "productName": "Business Onboarding",
+    "logoUrl": "/tenants/botim/logo-placeholder.svg",
+    "isPlaceholder": true,
+    "colors": {
+      "primary": "#1f4fa3",
+      "onPrimary": "#ffffff",
+      "accent": "#1f4fa3",
+      "highlight": "#9cc3ff",
+      "ink": "#0f1b2d",
+      "body": "#4a5568",
+      "surface": "#ffffff",
+      "surfaceAlt": "#eef4fd"
+    },
+    "fonts": { "sans": "'Inter', 'Helvetica Neue', Arial, sans-serif", "mono": "ui-monospace, Menlo, monospace" }
+  },
+  "copy": {
+    "welcomeTitle": "Start accepting payments with Botim.",
+    "welcomeBody": "Send your business documents from here, WhatsApp or email. We check them as they arrive and tell you exactly what is left.",
+    "supportLine": "Need help? Type HELP on WhatsApp or contact the onboarding team.",
+    "legalFooter": "Placeholder legal text. Replace with the text approved by Botim."
+  },
+  "contact": {
+    "supportEmail": "onboarding@botim.example",
+    "whatsappNumber": "+971500000001",
+    "emailDomain": "onboard.botim.example"
+  },
+  "nudges": {
+    "cadenceHours": [1, 24, 72, 168],
+    "maxAttempts": 4,
+    "quietHours": { "start": "21:00", "end": "09:00" },
+    "timezone": "Asia/Dubai"
+  },
+  "risk": { "prohibitedActivities": [] }
+}

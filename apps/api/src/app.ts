@@ -10,6 +10,7 @@ import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
 import { caseRoutes, downloadRoute } from './routes/cases';
 import { onboardingRoutes } from './routes/onboarding';
+import { tenantRoutes } from './routes/tenants';
 import { uaepassRoutes } from './integrations/uaepass/routes';
 import { errorHandler } from './routes/util';
 
@@ -45,6 +46,7 @@ export function createApp(ctx: Ctx, queue: JobQueue): Express {
 
   const v1 = express.Router();
   v1.use('/auth', authRoutes(ctx));
+  v1.use(tenantRoutes(ctx));
   v1.use(onboardingRoutes(ctx));
   v1.use(downloadRoute(ctx));
   v1.use(caseRoutes(ctx, queue));

@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import { CreateShareRequestSchema, SHARE_DOC_LABELS, type IdentityView, type ShareDocType } from '@moneybee/shared';
+import { CreateShareRequestSchema, SHARE_DOC_LABELS, publicTenantView, type IdentityView, type ShareDocType } from '@moneybee/shared';
 import { authenticate, requireRole } from '../../auth';
 import type { Ctx } from '../../context';
 import type { CaseRec } from '../../db/types';
@@ -24,6 +24,8 @@ function merchantView(ctx: Ctx, c: CaseRec, signedIn: boolean) {
     ? c.documents.filter((d) => d.provenance === 'issuer_verified').map((d) => ({ id: d.id, type: d.docType, label: SHARE_DOC_LABELS[d.docType as ShareDocType] ?? d.docType, issuer: d.issuingAuthority ?? '', requestNo: d.uaepassRequestNo ?? '', expiresOn: d.expiresOn ?? null, verifiedStatus: d.verifiedStatus }))
     : [];
   return {
+    // brand of the tenant that owns the case; poweredBy is always set by publicTenantView
+    tenant: publicTenantView(ctx.tenants.getOrDefault(c.tenantId)),
     case: { ref: c.ref, name: c.legalName ?? c.name },
     mode: ctx.uaepass.mode, signingEnabled: ctx.cfg.UAEPASS_SIGNING_ENABLED, providerName: ctx.cfg.UAEPASS_PROVIDER_NAME, shareTtlMinutes: ctx.cfg.UAEPASS_SHARE_TTL_MINUTES,
     signedIn, identity, shareRequests: signedIn ? u?.shareRequests ?? [] : [],
@@ -39,8 +41,7 @@ export function uaepassRoutes(ctx: Ctx): Router {
 
   /* ---------- ops: create the merchant invite link ---------- */
   r.post('/cases/:id/uaepass/invite', authenticate(ctx), requireRole('UNDERWRITER'), wrap(async (req, res) => {
-    const c = await ctx.store.cases.get(req.params.id);
-    if (!c) throw new HttpError(404, 'case not found');
+    const c = await req.cases!.require(req.params.id); // tenant-scoped: another tenant's case is a 404
     if (['APPROVED', 'REJECTED', 'COMPLETED'].includes(c.status)) throw new HttpError(409, `case is ${c.status}`);
     const inv = await createInvite(ctx, c.id);
     await audit(ctx, req, 'uaepass.invite_created', `case:${c.id}`, { expiresAt: inv.expiresAt });

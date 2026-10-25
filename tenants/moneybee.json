@@ -1,0 +1,43 @@
+{
+  "id": "moneybee",
+  "name": "MoneyBee",
+  "kind": "platform",
+  "status": "active",
+  "casePrefix": "MB",
+  "hostnames": ["localhost", "127.0.0.1"],
+  "locales": ["en", "ar"],
+  "enabledEntityTypes": ["sole_establishment", "llc", "free_zone", "mainland"],
+  "branding": {
+    "displayName": "MoneyBee",
+    "productName": "Onboard",
+    "logoUrl": "/tenants/moneybee/logo.svg",
+    "isPlaceholder": false,
+    "colors": {
+      "primary": "#17140f",
+      "onPrimary": "#ffffff",
+      "accent": "#915f17",
+      "highlight": "#deba6e",
+      "ink": "#17140f",
+      "body": "#6e675c",
+      "surface": "#ffffff",
+      "surfaceAlt": "#f6f1e6"
+    },
+    "fonts": { "sans": "'Instrument Sans', 'Helvetica Neue', Arial, sans-serif", "mono": "'IBM Plex Mono', ui-monospace, Menlo, monospace" }
+  },
+  "copy": {
+    "welcomeTitle": "Get your business ready to accept payments.",
+    "welcomeBody": "Send your documents from here, WhatsApp or email. We read them, tell you what is still missing and keep everything in one place.",
+    "supportLine": "Questions? Our onboarding team is here to help.",
+    "legalFooter": ""
+  },
+  "contact": {
+    "supportEmail": "onboarding@moneybee.world"
+  },
+  "nudges": {
+    "cadenceHours": [1, 24, 72, 168],
+    "maxAttempts": 4,
+    "quietHours": { "start": "21:00", "end": "09:00" },
+    "timezone": "Asia/Dubai"
+  },
+  "risk": { "prohibitedActivities": [] }
+}

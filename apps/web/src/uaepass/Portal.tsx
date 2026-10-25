@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { PoweredByMoneyBee, TenantMark, useTenantTheme } from '../tenant';
 import qrcode from 'qrcode-generator';
 import { SHARE_DOC_LABELS, SHARE_DOC_TYPES, type ShareDocType, type ShareRequestView, type SigningView } from '@moneybee/shared';
 import { m, invite } from './client';
@@ -27,7 +28,7 @@ export function MerchantPortal() {
 }
 
 function PortalInner() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const nav = useNavigate();
   const { invite: inviteParam } = useParams();
   const [sp, setSp] = useSearchParams();
@@ -53,6 +54,7 @@ function PortalInner() {
     refetchInterval: (q) => (q.state.data?.shareRequests.some((r) => r.status === 'pending') || q.state.data?.signing.some((s) => s.status === 'pending') ? 2500 : false),
   });
   const s = session.data;
+  useTenantTheme(s?.tenant); // brand of the tenant that owns this application
   const refresh = () => qc.invalidateQueries({ queryKey: ['merchant'] });
 
   const start = async () => {
@@ -72,7 +74,7 @@ function PortalInner() {
     <div>
       {s?.mode === 'mock' && <div className="up-sim-strip" role="status">{t.simulated}</div>}
       <header className="up-top">
-        <div className="wordmark">moneybee <small>{t.brandSub}</small></div>
+        {s?.tenant && s.tenant.kind !== 'platform' ? <TenantMark tenant={s.tenant} size={22} /> : <div className="wordmark">moneybee <small>{t.brandSub}</small></div>}
         <span className="grow" />
         {s?.signedIn && <button className="btn btn-ghost btn-sm" onClick={async () => { await m.post('/merchant/signout'); refresh(); }}>{t.signOut}</button>}
         <LangToggle />
@@ -93,7 +95,8 @@ function PortalInner() {
             {!s.signedIn ? <SignedOut s={s} handoff={handoff} onStart={start} onCancel={() => setHandoff(false)} /> : <SignedIn s={s} refresh={refresh} />}
           </>
         )}
-        <div className="up-foot">{t.secured}<br /><b>{t.powered}</b></div>
+        <div className="up-foot">{t.secured}</div>
+        <PoweredByMoneyBee locale={lang} />
       </main>
     </div>
   );

@@ -17,6 +17,7 @@ import { PolicyService } from './policy/service';
 import { createRepository } from './sql';
 import type { OnboardingRepository } from './sql/repository';
 import { createBlobStore, createMemoryBlobStore, type BlobStore } from './storage';
+import { TenantService } from './tenancy/service';
 
 export interface BuildOverrides {
   store?: Store;
@@ -40,9 +41,11 @@ export async function buildCtx(cfg: Config, log: Logger, o: BuildOverrides = {})
   const llm = o.llm ?? (resolveLlmMode(cfg) === 'live' ? createAnthropicClient(cfg) : createMockLlm());
   const policies = new PolicyService(store);
   await policies.init();
+  const tenants = new TenantService(store);
+  await tenants.init();
   const fileUrlSecret = createHash('sha256').update(`file-url:${cfg.JWT_SECRET || piiKey}`).digest('base64url');
   return {
-    cfg, log, store, repo, blobs, cipher, llm, policies, bus: new EventBus(), screening: createScreeningProvider(cfg.SCREENING_PROVIDER),
+    cfg, log, store, repo, blobs, cipher, llm, policies, tenants, bus: new EventBus(), screening: createScreeningProvider(cfg.SCREENING_PROVIDER),
     adapters: { file_pack: filePackAdapter, api_submit_mock: apiSubmitMockAdapter }, uaepass: createUaePassProvider(cfg), fileUrlSecret, now: o.now ?? (() => new Date()),
   };
 }

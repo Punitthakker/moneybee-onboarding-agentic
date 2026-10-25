@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, can, type Role } from '../api';
-import { useMe } from '../App';
+import { useMe, useTenant } from '../App';
 import { MockBanner, toast } from '../components/ui';
 
 interface SettingsRes { tokenTtlHours: number; webhookUrl: string; webhookSecretSet: boolean; llmMode: string; screeningProvider: string; screeningIsMock: boolean; model: string }
@@ -11,6 +11,8 @@ interface UserRow { id: string; email: string; name: string; role: Role; active:
 export function Settings() {
   const me = useMe();
   const admin = can.admin(me);
+  // global token, webhook and policy settings belong to the platform tenant; partner admins see them read-only
+  const platform = useTenant()?.kind === 'platform';
   const [tab, setTab] = useState<'policy' | 'acquirers' | 'tokens' | 'users'>('policy');
   return (
     <div className="stack" style={{ gap: 22 }}>
@@ -24,8 +26,9 @@ export function Settings() {
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
-      {(tab === 'policy' || tab === 'acquirers') && <PolicyEditor which={tab} admin={admin} />}
-      {tab === 'tokens' && <TokenSettings admin={admin} />}
+      {admin && !platform && <div className="banner warn">Policies, acquirers, tokens and webhook are managed by MoneyBee for all partners. You can manage your own users.</div>}
+      {(tab === 'policy' || tab === 'acquirers') && <PolicyEditor which={tab} admin={admin && platform} />}
+      {tab === 'tokens' && <TokenSettings admin={admin && platform} />}
       {tab === 'users' && (admin ? <Users /> : <p className="muted">Admins manage users.</p>)}
     </div>
   );

@@ -46,7 +46,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .shell { min-height: 100vh; display: flex; flex-direction: column; }
 .topbar { position: sticky; top: 0; z-index: 20; padding: 14px 20px 0; }
 .nav-glass { max-width: 1440px; margin: 0 auto; height: 56px; display: flex; align-items: center; gap: 18px; padding: 0 10px 0 24px; border-radius: 28px;
-  background: rgba(255, 255, 255, 0.6) linear-gradient(90deg, rgba(255,255,255,0) 30%, rgba(222,186,110,.35) 100%); border: 1px solid rgba(255,255,255,.8);
+  background: rgba(255, 255, 255, 0.6) linear-gradient(90deg, rgba(255,255,255,0) 30%, var(--honey-soft) 100%); border: 1px solid rgba(255,255,255,.8);
   box-shadow: var(--shadow-soft); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
 .wordmark { font-size: 24px; font-weight: 600; letter-spacing: -1.3px; text-decoration: none; display: inline-flex; align-items: baseline; gap: 8px; }
 .wordmark small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--gold); }
@@ -206,3 +206,11 @@ main { flex: 1; width: 100%; max-width: 1440px; margin: 0 auto; padding: 28px 20
   .topbar { padding: 10px 12px 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* tenant branding (white-label) */
+.tenant-mark { align-items: center; gap: 10px; }
+.tenant-mark img { display: block; border-radius: 10px; }
+.placeholder-pill { font-size: 10px; letter-spacing: .04em; text-transform: uppercase; margin-left: 6px; height: 20px; background: transparent; color: var(--gold); border: 1px dashed var(--chip-line); }
+/* fixed attribution line: shown on every page, never configurable */
+.powered-by { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 18px 20px 22px; font-size: 12.5px; color: var(--body); font-weight: 500; }
+.powered-by span[lang="ar"] { color: var(--muted); }

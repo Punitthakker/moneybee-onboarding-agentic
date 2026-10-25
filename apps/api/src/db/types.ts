@@ -12,6 +12,7 @@ import type {
   ShareRequestView,
   SigningView,
   SopLevel,
+  Tenant,
 } from '@moneybee/shared';
 
 export interface FileRec {
@@ -160,6 +161,8 @@ export interface CaseUaePass {
 
 export interface CaseRec {
   id: string;
+  /** owning tenant; records created before tenancy are treated as DEFAULT_TENANT_ID (moneybee) */
+  tenantId?: string;
   ref: string;
   version: number;
   name: string;
@@ -227,6 +230,7 @@ export interface TraceRec {
 
 export interface AuditRec {
   id: string;
+  tenantId?: string;
   actor: string;
   action: string;
   entity: string;
@@ -239,6 +243,8 @@ export interface AuditRec {
 
 export interface UserRec {
   id: string;
+  /** tenant the user works in; users created before tenancy belong to DEFAULT_TENANT_ID (moneybee) */
+  tenantId?: string;
   email: string;
   name: string;
   role: Role;
@@ -281,7 +287,15 @@ export interface WebhookDeliveryRec {
   bodyEnc?: string | null;
 }
 
+export interface TenantRec extends Tenant {
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
 export interface CaseListFilter {
+  /** set by the tenant-scoped accessor (db/tenant-scope.ts); user-facing code never lists across tenants */
+  tenantId?: string;
   status?: CaseStatus;
   q?: string;
   entityType?: EntityType;
@@ -304,14 +318,20 @@ export interface Store {
   };
   audit: {
     add(a: AuditRec): Promise<void>;
-    list(filter?: { entity?: string; limit?: number }): Promise<AuditRec[]>;
+    list(filter?: { entity?: string; tenantId?: string; limit?: number }): Promise<AuditRec[]>;
   };
   users: {
     findByEmail(email: string): Promise<UserRec | null>;
     findById(id: string): Promise<UserRec | null>;
     create(u: UserRec): Promise<UserRec>;
     update(id: string, patch: Partial<UserRec>): Promise<UserRec | null>;
-    list(): Promise<UserRec[]>;
+    list(filter?: { tenantId?: string }): Promise<UserRec[]>;
+  };
+  tenants: {
+    get(id: string): Promise<TenantRec | null>;
+    list(): Promise<TenantRec[]>;
+    /** insert or replace the whole tenant document */
+    put(t: TenantRec): Promise<void>;
   };
   policies: {
     active(): Promise<PolicySetRec | null>;

@@ -20,3 +20,12 @@
 - **Signing behind `UAEPASS_SIGNING_ENABLED`**, default off.
 - **No official UAE PASS logo or assets** are used until brand-usage approval is in place. The button shows a neutral text mark.
 - **Open questions for the UAE PASS team**: document sharing API and scopes for a private service provider, which documents can be requested (trade licence?), webhook or polling, staging credentials, pricing, branding rules, and whether SOP3 is required for financial-services KYC.
+
+## White-label tenancy (Oct 2026, Botim)
+- **Tenancy lives in the data-access layer.** Cases, users and audit records carry `tenantId`. Ops routes reach cases only through `tenantCases()` (set on the request by `authenticate`), so another tenant's case is indistinguishable from a missing one (404). Background agents keep using `ctx.store` because they only receive ids of cases created inside a tenant. Records created before tenancy are backfilled to `moneybee` on boot.
+- **Mongo stays the system of work, SQL Server the system of record.** The extension adds every new entity to Mongo behind the `Store` interface. A Mongo `OnboardingRepository` (to run without SQL Server) is an open decision, proposed for phase 7. See `docs/EXISTING_STATE.md`.
+- **Platform versus white-label.** Only the `platform` tenant (MoneyBee) may change global settings, policies, acquirer config and the webhook, because those apply to every tenant. White-label admins manage their own users, brand, copy, contacts, nudges and enabled company types.
+- **"Powered by MoneyBee" is a constant, not config.** `POWERED_BY` in `packages/shared/src/tenant.ts` is appended by `publicTenantView` and rendered by `PoweredByMoneyBee`. Tenant schemas are strict, so a `poweredBy` key (or any unknown key) is rejected at boot and in `PUT /tenant`.
+- **Theme by CSS variables.** The tenant palette is mapped onto the existing design tokens at runtime. The platform tenant keeps the original MoneyBee stylesheet; white-label tenants also replace the warm neutrals and use solid primary buttons.
+- **Placeholder partner assets.** The Botim logo, colours, support email, WhatsApp number and email domain are placeholders (`branding.isPlaceholder: true`, shown as a "placeholder brand" tag) until Botim supplies approved assets. No Botim artwork is used.
+- **Mailpit instead of MailHog.** Same purpose and ports, actively maintained.

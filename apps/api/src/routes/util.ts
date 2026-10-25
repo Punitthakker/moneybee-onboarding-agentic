@@ -26,7 +26,7 @@ export const hashJson = (v: unknown) => createHash('sha256').update(JSON.stringi
 
 export async function audit(ctx: Ctx, req: Request, action: string, entity: string, meta?: unknown, before?: unknown, after?: unknown) {
   await ctx.store.audit.add({
-    id: randomUUID(), actor: req.user?.email ?? 'anonymous', action, entity, ip: req.ip ?? null, at: ctx.now().toISOString(), meta,
+    id: randomUUID(), tenantId: req.tenantId ?? req.user?.tenantId, actor: req.user?.email ?? 'anonymous', action, entity, ip: req.ip ?? null, at: ctx.now().toISOString(), meta,
     beforeHash: before === undefined ? null : hashJson(before), afterHash: after === undefined ? null : hashJson(after),
   });
 }

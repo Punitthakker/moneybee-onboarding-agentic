@@ -21,8 +21,14 @@ export async function makeTestApp(env: Record<string, string> = {}) {
   const queue = createInlineQueue(() => ctx, { awaitPipeline: true }) as ReturnType<typeof createInlineQueue> & { idle(): Promise<void> };
   const app = createApp(ctx, queue);
   const users: Record<string, string> = {};
+  // users without tenantId belong to the platform tenant (moneybee), like records created before tenancy
   for (const [role, email] of [['ADMIN', 'admin@t.local'], ['UNDERWRITER', 'uw@t.local'], ['UNDERWRITER', 'uw2@t.local'], ['SECOND_REVIEWER', 'sr@t.local'], ['VIEWER', 'v@t.local']] as [Role, string][]) {
     await ctx.store.users.create({ id: randomUUID(), email, name: email, role, passwordHash: await bcrypt.hash('pw-123456789', 4), active: true, createdAt: new Date().toISOString() });
+    users[email] = email;
+  }
+  // white-label tenant users
+  for (const [role, email] of [['ADMIN', 'admin@botim.test'], ['UNDERWRITER', 'uw@botim.test'], ['VIEWER', 'v@botim.test']] as [Role, string][]) {
+    await ctx.store.users.create({ id: randomUUID(), tenantId: 'botim', email, name: email, role, passwordHash: await bcrypt.hash('pw-123456789', 4), active: true, createdAt: new Date().toISOString() });
     users[email] = email;
   }
   const login = async (email: string) => {

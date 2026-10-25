@@ -24,6 +24,8 @@ Open **http://localhost:8080** and sign in with the admin or demo login printed 
 | MinIO console | http://localhost:9001 |
 | SQL Server | localhost:1433 (user `sa`, password `MSSQL_SA_PASSWORD` from `.env`) |
 | Webhook sink logs | `docker compose logs -f webhook-sink` |
+| Mail catcher (Mailpit) | http://localhost:8025 |
+| Sanctions screening (Watchman, internal) | http://localhost:8084 |
 
 Add your `ANTHROPIC_API_KEY` to `.env` and run `docker compose up -d api` to switch from the MOCK fixture parser to live Claude.
 
@@ -47,6 +49,20 @@ npm run eval       # pipeline accuracy on the fixtures; fails below the floors
 npm run e2e        # Playwright happy path (needs the stack running)
 npm run typecheck
 ```
+
+## White-label tenants (MoneyBee and Botim)
+
+One codebase serves several brands. Each tenant has its own cases, users, audit log, brand, copy, contact details, nudge cadence and enabled company types, configured in `tenants/*.json` (loaded on first boot, then edited by the tenant's ADMIN).
+
+| Tenant | Kind | Open | Demo logins |
+|---|---|---|---|
+| MoneyBee | platform (default) | http://localhost:8080 | `admin@moneybee.local`, `underwriter@`, `second@`, `viewer@moneybee.local` |
+| Botim | white-label | http://botim.localhost:8080 (or http://localhost:8080/?tenant=botim) | `admin@botim.local`, `underwriter@`, `second@`, `viewer@botim.local` |
+
+- **Isolation.** Every user-facing case query goes through a tenant-scoped accessor (`apps/api/src/db/tenant-scope.ts`). A case from another tenant answers 404, exactly like a missing case. Global settings, policies and acquirer config can only be changed by platform (MoneyBee) admins.
+- **Branding.** Login, ops console and merchant portal take the tenant's logo, colours, fonts and copy. The merchant portal always uses the brand of the tenant that owns the case. The Botim logo and colours are **placeholders** until Botim supplies approved assets (see `tenants/README.md`).
+- **"Powered by MoneyBee"** is fixed: it comes from a platform constant, appears on every page, and any tenant update that tries to set it is rejected.
+- **API:** `GET /api/v1/public/tenant` (brand for a public page, by `?tenant=`, `x-moneybee-tenant` header or host name), `GET /api/v1/tenant` and `PUT /api/v1/tenant` (own tenant, ADMIN to edit).
 
 ## UAE PASS (mock and live)
 

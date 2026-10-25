@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { api } from '../api';
+import { PoweredByMoneyBee, TenantMark, type PublicTenant } from '../tenant';
 
-export function Login({ onDone }: { onDone: () => void }) {
+export function Login({ onDone, tenant }: { onDone: () => void; tenant?: PublicTenant | null }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
@@ -22,7 +23,7 @@ export function Login({ onDone }: { onDone: () => void }) {
   return (
     <div className="login hexbg">
       <form className="card" style={{ width: 'min(440px,100%)', padding: 32, boxShadow: 'var(--shadow-soft)' }} onSubmit={submit}>
-        <div className="wordmark" style={{ marginBottom: 26 }}>moneybee <small>Onboard</small></div>
+        <div style={{ marginBottom: 26 }}><TenantMark tenant={tenant} /></div>
         <p className="eyebrow">Merchant onboarding, done by agents</p>
         <h1 className="h2">Sign in.<span className="grey">Review what the agents prepared.</span></h1>
         <div className="stack" style={{ marginTop: 24 }}>
@@ -32,6 +33,7 @@ export function Login({ onDone }: { onDone: () => void }) {
           <button className="btn btn-dark" disabled={busy} type="submit">{busy ? 'Signing in' : 'Sign in'}</button>
         </div>
       </form>
+      <PoweredByMoneyBee />
     </div>
   );
 }

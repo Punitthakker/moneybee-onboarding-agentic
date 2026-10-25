@@ -58,14 +58,11 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
   const writer = requireRole('UNDERWRITER');
   const reviewer = requireRole('UNDERWRITER', 'SECOND_REVIEWER');
 
-  const load = async (id: string) => {
-    const c = await ctx.store.cases.get(id);
-    if (!c) throw new HttpError(404, 'case not found');
-    return c;
-  };
+  /** every case lookup goes through the caller's tenant scope: another tenant's case is a 404 */
+  const load = (req: Request, id: string) => req.cases!.require(id);
 
-  r.get('/stats', auth, wrap(async (_req, res) => {
-    const all = await ctx.store.cases.list({ limit: 1000 });
+  r.get('/stats', auth, wrap(async (req, res) => {
+    const all = await req.cases!.list({ limit: 1000 });
     const today = new Date().toISOString().slice(0, 10);
     let auto = 0;
     let total = 0;
@@ -87,7 +84,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
 
   r.get('/cases', auth, wrap(async (req, res) => {
     const q = z.object({ status: z.string().optional(), q: z.string().optional(), entityType: EntityTypeSchema.optional(), acquirer: z.string().optional() }).parse(req.query);
-    const rows = await ctx.store.cases.list({ ...q, status: q.status as never });
+    const rows = await req.cases!.list({ ...q, status: q.status as never });
     res.json({
       cases: rows.map((c) => ({
         id: c.id, ref: c.ref, name: c.legalName ?? c.name, status: c.status, entityType: c.entityType ?? c.entityTypeRequested, acquirerCode: c.acquirerCode, risk: c.risk?.rating ?? null,
@@ -100,21 +97,23 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
     const b = parse(CreateCase, req.body);
     const acq = (await ctx.policies.acquirers()).find((a) => a.code === b.acquirerCode);
     if (!acq) throw new HttpError(400, `unknown acquirer ${b.acquirerCode}`);
-    const n = (await ctx.store.cases.count()) + 1;
+    const tenant = ctx.tenants.getOrDefault(req.tenantId);
+    if (b.entityType !== 'auto' && !tenant.enabledEntityTypes.includes(b.entityType)) throw new HttpError(400, `company type ${b.entityType} is not enabled for ${tenant.name}`);
+    const n = (await ctx.store.cases.count()) + 1; // global counter keeps references unique across tenants
     const now = ctx.now().toISOString();
     const c: CaseRec = {
-      id: randomUUID(), ref: `MB-${new Date().getUTCFullYear()}-${String(n).padStart(4, '0')}`, version: 1, name: b.name ?? 'New merchant', status: 'RECEIVED', entityTypeRequested: b.entityType,
+      id: randomUUID(), tenantId: tenant.id, ref: `${tenant.casePrefix}-${new Date().getUTCFullYear()}-${String(n).padStart(4, '0')}`, version: 1, name: b.name ?? 'New merchant', status: 'RECEIVED', entityTypeRequested: b.entityType,
       acquirerCode: b.acquirerCode, ownerId: req.user!.id, ownerEmail: req.user!.email, createdAt: now, updatedAt: now, files: [], documents: [], fields: {}, directors: [], shareholders: [], signatories: [],
       idHolders: [], findings: [], checklist: [], reviews: [], needsReviewFields: [], injectionSuspected: false, usage: { tokens: 0, budget: ctx.cfg.CASE_TOKEN_BUDGET, calls: 0 }, run: { seq: 0, state: 'idle' },
     };
     if (b.entityType !== 'auto') c.entityType = b.entityType;
-    await ctx.store.cases.create(c);
+    await req.cases!.create(c);
     await audit(ctx, req, 'case.created', `case:${c.id}`);
     res.status(201).json({ id: c.id, ref: c.ref });
   }));
 
   r.get('/cases/:id', auth, wrap(async (req, res) => {
-    const c = await load(req.params.id);
+    const c = await load(req, req.params.id);
     await audit(ctx, req, 'case.read_pii', `case:${c.id}`); // PII read is audited
     const [traces, webhooks, policy] = await Promise.all([ctx.store.traces.listByCase(c.id), ctx.store.webhooks.listByCase(c.id), ctx.policies.forAcquirer(c.acquirerCode)]);
     res.json({
@@ -124,7 +123,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
   }));
 
   r.post('/cases/:id/documents', auth, writer, upload.array('files'), wrap(async (req, res) => {
-    const c = await load(req.params.id);
+    const c = await load(req, req.params.id);
     if (['APPROVED', 'REJECTED', 'COMPLETED'].includes(c.status)) throw new HttpError(409, `case is ${c.status}`);
     const inputs: IntakeInput[] = [];
     for (const f of (req.files as Express.Multer.File[] | undefined) ?? []) inputs.push({ name: f.originalname, data: f.buffer, originPath: f.originalname });
@@ -135,7 +134,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
     }
     if (!inputs.length) throw new HttpError(400, 'no files or email provided');
     const result = await ingest(ctx, c.id, inputs);
-    await ctx.store.cases.update(c.id, (x) => {
+    await req.cases!.update(c.id, (x) => {
       x.files.push(...result.added);
       if (result.added.some((f) => f.injectionSuspected)) x.injectionSuspected = true;
       if (x.name === 'New merchant' && result.added[0]) x.name = `Merchant (${result.added[0].name})`;
@@ -146,12 +145,12 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
 
   r.post('/cases/:id/run', auth, writer, wrap(async (req, res) => {
     const { from } = z.object({ from: z.enum(['classify', 'verify']).default('classify') }).parse(req.body ?? {});
-    const c = await load(req.params.id);
+    const c = await load(req, req.params.id);
     if (['APPROVED', 'REJECTED', 'COMPLETED'].includes(c.status)) throw new HttpError(409, `case is ${c.status}`);
     if (c.run?.state === 'running' || c.run?.state === 'queued') throw new HttpError(409, 'pipeline already running');
     if (!c.files.length) throw new HttpError(400, 'upload documents first');
     const seq = (c.run?.seq ?? 0) + 1;
-    await ctx.store.cases.update(c.id, (x) => {
+    await req.cases!.update(c.id, (x) => {
       x.run = { seq, state: 'queued' };
       if (x.usage.tokens >= x.usage.budget) x.usage.budget = ctx.cfg.CASE_TOKEN_BUDGET + x.usage.tokens; // an explicit human re-run grants a fresh budget window
     });
@@ -162,11 +161,11 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
 
   r.patch('/cases/:id/fields', auth, reviewer, wrap(async (req, res) => {
     const b = parse(FieldPatch, req.body);
-    const c = await load(req.params.id);
+    const c = await load(req, req.params.id);
     if (!['AWAITING_REVIEW', 'NEEDS_INFO'].includes(c.status)) throw new HttpError(409, `fields can be edited in AWAITING_REVIEW or NEEDS_INFO (current: ${c.status})`);
     const before = c.fields[b.path];
     const now = ctx.now().toISOString();
-    const updated = await ctx.store.cases.update(c.id, (x) => {
+    const updated = await req.cases!.update(c.id, (x) => {
       const cur: CaseField = x.fields[b.path] ?? { value: null, confidence: 0, needsReview: false };
       if (b.confirm) {
         x.fields[b.path] = { ...cur, needsReview: false, edited: { by: req.user!.email, reason: b.reason, at: now, previous: cur.value } };
@@ -183,7 +182,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
 
   r.post('/cases/:id/review', auth, reviewer, wrap(async (req, res) => {
     const b = parse(ReviewBody, req.body);
-    const c = await load(req.params.id);
+    const c = await load(req, req.params.id);
     if (c.status !== 'AWAITING_REVIEW') throw new HttpError(409, `case is ${c.status}; review needs AWAITING_REVIEW`);
     if (c.run?.state === 'running' || c.run?.state === 'queued') throw new HttpError(409, 'pipeline is running');
     const me = req.user!;
@@ -194,7 +193,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
       if (needsTwo && c.reviews.some((x) => x.decision === 'approve') && !['SECOND_REVIEWER', 'ADMIN'].includes(me.role)) throw new HttpError(403, 'the second approval must come from a SECOND_REVIEWER');
       if (needsTwo && !c.reviews.some((x) => x.decision === 'approve') && me.role === 'SECOND_REVIEWER') throw new HttpError(403, 'the first approval must come from an UNDERWRITER');
     }
-    const updated = await ctx.store.cases.update(c.id, (x) => {
+    const updated = await req.cases!.update(c.id, (x) => {
       x.reviews.push({ reviewerId: me.id, reviewerEmail: me.email, role: me.role, decision: b.decision, notes: b.notes, at: ctx.now().toISOString() });
       if (b.decision === 'reject') transition(x, 'REJECTED', { type: 'human', id: me.id, email: me.email });
       else if (b.decision === 'request_info') transition(x, 'NEEDS_INFO', { type: 'human', id: me.id, email: me.email });
@@ -210,6 +209,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
   }));
 
   r.post('/cases/:id/complete', auth, writer, wrap(async (req, res) => {
+    await load(req, req.params.id); // tenant check before completion touches the case
     try {
       const out = await completeCase(ctx, queue, req.params.id, { id: req.user!.id, email: req.user!.email }, req.ip ?? null);
       res.status(201).json({ ...out, note: 'The token is shown once and cannot be retrieved again.' });
@@ -220,11 +220,11 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
   }));
 
   r.post('/cases/:id/submit-pack', auth, writer, wrap(async (req, res) => {
-    const c = await load(req.params.id);
+    const c = await load(req, req.params.id);
     if (!c.pack) throw new HttpError(409, 'no pack built');
     const adapter = ctx.adapters.api_submit_mock;
     const sub = await adapter.submit(ctx, c, { files: c.pack.files, payload: c.pack.payload as Record<string, unknown> });
-    await ctx.store.cases.update(c.id, (x) => {
+    await req.cases!.update(c.id, (x) => {
       x.pack!.submission = sub;
     });
     await audit(ctx, req, 'pack.submit_mock', `case:${c.id}`);
@@ -233,7 +233,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
 
   // SSE: live agent timeline
   r.get('/cases/:id/events', auth, wrap(async (req, res) => {
-    await load(req.params.id);
+    await load(req, req.params.id);
     res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
     res.flushHeaders();
     const send = (e: unknown) => res.write(`data: ${JSON.stringify(e)}\n\n`);
@@ -248,7 +248,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
 
   // authenticated file view for the document viewer
   r.get('/cases/:id/files/:fileId', auth, wrap(async (req, res) => {
-    const c = await load(req.params.id);
+    const c = await load(req, req.params.id);
     const f = c.files.find((x) => x.id === req.params.fileId);
     if (!f) throw new HttpError(404, 'file not found');
     await audit(ctx, req, 'file.read_pii', `case:${c.id}:file:${f.id}`);
@@ -258,7 +258,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
   }));
 
   r.get('/cases/:id/pack/:name', auth, wrap(async (req, res) => {
-    const c = await load(req.params.id);
+    const c = await load(req, req.params.id);
     const f = c.pack?.files.find((x) => x.name === req.params.name);
     if (!f) throw new HttpError(404, 'file not found');
     await audit(ctx, req, 'pack.read_pii', `case:${c.id}:${f.name}`);
@@ -267,13 +267,15 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
     res.send(data);
   }));
 
-  r.get('/webhooks/dead', auth, wrap(async (_req, res) => {
+  r.get('/webhooks/dead', auth, wrap(async (req, res) => {
     const dead = await ctx.store.webhooks.listDead();
-    res.json({ deliveries: dead.map(({ bodyEnc: _b, ...w }) => w) });
+    const mine: typeof dead = [];
+    for (const d of dead) if (await req.cases!.get(d.caseId)) mine.push(d); // only this tenant's deliveries
+    res.json({ deliveries: mine.map(({ bodyEnc: _b, ...w }) => w) });
   }));
   r.post('/webhooks/:id/retry', auth, writer, wrap(async (req, res) => {
     const d = await ctx.store.webhooks.get(req.params.id);
-    if (!d) throw new HttpError(404, 'delivery not found');
+    if (!d || !(await req.cases!.get(d.caseId))) throw new HttpError(404, 'delivery not found');
     if (!d.bodyEnc) throw new HttpError(409, 'delivery body already cleared (it was delivered)');
     await ctx.store.webhooks.update(d.id, { status: 'PENDING', attempts: 0, lastError: undefined });
     await queue.enqueueWebhook({ deliveryId: d.id });

@@ -10,6 +10,7 @@ import type { BlobStore } from './storage';
 import type { OnboardingRepository } from './sql/repository';
 import type { AcquirerAdapter } from './agents/packbuilder';
 import type { UaePassProvider } from './integrations/uaepass/types';
+import type { TenantService } from './tenancy/service';
 
 export interface Ctx {
   cfg: Config;
@@ -20,6 +21,7 @@ export interface Ctx {
   cipher: PiiCipher;
   llm: LlmClient;
   policies: PolicyService;
+  tenants: TenantService;
   bus: EventBus;
   screening: ScreeningProvider;
   adapters: Record<string, AcquirerAdapter>;

@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
-import type { AuditRec, CaseListFilter, CaseRec, PolicySetRec, SettingsRec, Store, TraceRec, UserRec, WebhookDeliveryRec } from './types';
+import { DEFAULT_TENANT_ID } from '@moneybee/shared';
+import type { AuditRec, CaseListFilter, CaseRec, PolicySetRec, SettingsRec, Store, TenantRec, TraceRec, UserRec, WebhookDeliveryRec } from './types';
 import { ConflictError } from './types';
 
 const loose = (name: string, indexes: Record<string, 1 | -1>[] = []) => {
@@ -31,13 +32,17 @@ const fromDoc = <T>(d: Record<string, unknown> | null): T | null => {
 
 export async function createMongoStore(url: string): Promise<Store> {
   await mongoose.connect(url, { serverSelectionTimeoutMS: 15000 });
-  const Cases = loose('cases', [{ createdAt: -1 }, { status: 1 }]);
+  const Cases = loose('cases', [{ createdAt: -1 }, { status: 1 }, { tenantId: 1, createdAt: -1 }, { tenantId: 1, status: 1 }]);
   const Traces = loose('traces', [{ caseId: 1, startedAt: 1 }]);
-  const Audit = loose('audit', [{ entity: 1, at: -1 }]);
-  const Users = loose('users', [{ email: 1 }]);
+  const Audit = loose('audit', [{ entity: 1, at: -1 }, { tenantId: 1, at: -1 }]);
+  const Users = loose('users', [{ email: 1 }, { tenantId: 1 }]);
   const Policies = loose('policy_versions', [{ version: -1 }]);
   const Settings = loose('settings');
   const Hooks = loose('webhook_deliveries', [{ caseId: 1 }, { status: 1 }]);
+  const Tenants = loose('tenants');
+
+  // Records written before tenancy belong to the platform tenant. Idempotent, runs on every boot.
+  for (const M of [Cases, Users, Audit]) await M.updateMany({ tenantId: { $exists: false } }, { $set: { tenantId: DEFAULT_TENANT_ID } });
 
   const lean = <T>(q: unknown) => q as unknown as Promise<T>;
 
@@ -52,6 +57,7 @@ export async function createMongoStore(url: string): Promise<Store> {
       },
       async list(f: CaseListFilter = {}) {
         const q: Record<string, unknown> = {};
+        if (f.tenantId) q.tenantId = f.tenantId;
         if (f.status) q.status = f.status;
         if (f.acquirer) q.acquirerCode = f.acquirer;
         if (f.entityType) q.$or = [{ entityType: f.entityType }, { entityType: { $exists: false }, entityTypeRequested: f.entityType }];
@@ -94,7 +100,10 @@ export async function createMongoStore(url: string): Promise<Store> {
         await Audit.create(toDoc(a));
       },
       async list(f = {}) {
-        const rows = await lean<Record<string, unknown>[]>(Audit.find(f.entity ? { entity: f.entity } : {}).sort({ at: -1 }).limit(f.limit ?? 200).lean());
+        const q: Record<string, unknown> = {};
+        if (f.entity) q.entity = f.entity;
+        if (f.tenantId) q.tenantId = f.tenantId;
+        const rows = await lean<Record<string, unknown>[]>(Audit.find(q).sort({ at: -1 }).limit(f.limit ?? 200).lean());
         return rows.map((r) => fromDoc<AuditRec>(r)!);
       },
     },
@@ -113,9 +122,21 @@ export async function createMongoStore(url: string): Promise<Store> {
         const { id: _i, ...rest } = patch as Record<string, unknown>;
         return fromDoc<UserRec>(await lean(Users.findByIdAndUpdate(id, { $set: rest }, { new: true }).lean()));
       },
-      async list() {
-        const rows = await lean<Record<string, unknown>[]>(Users.find().lean());
+      async list(f = {}) {
+        const rows = await lean<Record<string, unknown>[]>(Users.find(f.tenantId ? { tenantId: f.tenantId } : {}).lean());
         return rows.map((r) => fromDoc<UserRec>(r)!);
+      },
+    },
+    tenants: {
+      async get(id) {
+        return fromDoc<TenantRec>(await lean(Tenants.findById(id).lean()));
+      },
+      async list() {
+        const rows = await lean<Record<string, unknown>[]>(Tenants.find().sort({ _id: 1 }).lean());
+        return rows.map((r) => fromDoc<TenantRec>(r)!);
+      },
+      async put(t) {
+        await Tenants.replaceOne({ _id: t.id }, toDoc(t), { upsert: true });
       },
     },
     policies: {
