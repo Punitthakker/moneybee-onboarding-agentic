@@ -12,6 +12,7 @@ import { caseRoutes, downloadRoute } from './routes/cases';
 import { onboardingRoutes } from './routes/onboarding';
 import { tenantRoutes } from './routes/tenants';
 import { uaepassRoutes } from './integrations/uaepass/routes';
+import { portalRoutes } from './portal/routes';
 import { errorHandler } from './routes/util';
 
 export function createApp(ctx: Ctx, queue: JobQueue): Express {
@@ -48,6 +49,7 @@ export function createApp(ctx: Ctx, queue: JobQueue): Express {
   v1.use('/auth', authRoutes(ctx));
   v1.use(tenantRoutes(ctx));
   v1.use(onboardingRoutes(ctx));
+  v1.use(portalRoutes(ctx, queue));
   v1.use(downloadRoute(ctx));
   v1.use(caseRoutes(ctx, queue));
   v1.use(adminRoutes(ctx));

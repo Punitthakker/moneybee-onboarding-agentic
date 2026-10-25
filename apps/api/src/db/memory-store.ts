@@ -33,6 +33,7 @@ export function createMemoryStore(): Store {
         if (f.status) a = a.filter((c) => c.status === f.status);
         if (f.entityType) a = a.filter((c) => (c.entityType ?? c.entityTypeRequested) === f.entityType);
         if (f.acquirer) a = a.filter((c) => c.acquirerCode === f.acquirer);
+        if (f.portalEmailHash) a = a.filter((c) => c.portal?.contact.emailHash === f.portalEmailHash);
         if (f.q) {
           const q = f.q.toLowerCase();
           a = a.filter((c) => c.name.toLowerCase().includes(q) || c.ref.toLowerCase().includes(q) || (c.legalName ?? '').toLowerCase().includes(q));

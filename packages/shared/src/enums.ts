@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ENTITY_TYPES = ['sole_establishment', 'llc', 'free_zone', 'mainland'] as const;
+export const ENTITY_TYPES = ['sole_establishment', 'llc', 'free_zone', 'mainland', 'branch'] as const;
 export const EntityTypeSchema = z.enum(ENTITY_TYPES);
 export type EntityType = z.infer<typeof EntityTypeSchema>;
 
@@ -9,6 +9,7 @@ export const ENTITY_TYPE_LABELS: Record<EntityType, string> = {
   llc: 'LLC (mainland)',
   free_zone: 'Free zone company',
   mainland: 'Mainland company (DET / emirate authority)',
+  branch: 'Branch of a UAE or foreign company',
 };
 
 export const DOC_TYPES = [
@@ -31,6 +32,12 @@ export const DOC_TYPES = [
   'processing_statement',
   'company_profile',
   'corporate_shareholder_docs',
+  'parent_company_documents',
+  'branch_board_resolution',
+  'parent_ownership_chart',
+  'chamber_certificate',
+  'incumbency_certificate',
+  'local_service_agent_agreement',
   'unknown',
 ] as const;
 export const DocTypeSchema = z.enum(DOC_TYPES);
@@ -56,10 +63,18 @@ export const DOC_TYPE_LABELS: Record<DocType, string> = {
   processing_statement: 'Processing statement',
   company_profile: 'Company profile',
   corporate_shareholder_docs: 'Corporate shareholder documents',
+  parent_company_documents: 'Parent company licence / incorporation documents',
+  branch_board_resolution: 'Parent board resolution to open the branch',
+  parent_ownership_chart: 'Parent shareholding and UBO chart',
+  chamber_certificate: 'Chamber of commerce certificate',
+  incumbency_certificate: 'Incumbency / good standing certificate',
+  local_service_agent_agreement: 'Local service agent agreement',
   unknown: 'Unclassified',
 };
 
 export const CASE_STATUSES = [
+  /** merchant is still collecting documents in the self-serve portal; nothing runs yet */
+  'DRAFT',
   'RECEIVED',
   'CLASSIFIED',
   'EXTRACTED',

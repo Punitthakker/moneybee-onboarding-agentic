@@ -33,9 +33,23 @@ const EmailBody = z.object({
   attachments: z.array(z.object({ filename: z.string().max(260), contentBase64: z.string() })).max(50).default([]),
 });
 
+const safe = (f: () => string) => {
+  try {
+    return f();
+  } catch {
+    return undefined;
+  }
+};
+
 /** VIEWER role sees ID numbers masked. */
-function present(c: CaseRec, role: string): CaseRec {
+function present(c: CaseRec, role: string, cipher?: { decrypt(s: string): string }): CaseRec {
   const out = structuredClone(c);
+  // portal: never send the link hash or the encrypted contact; reviewers see the email, viewers the masked one
+  if (out.portal) {
+    const { emailEnc, emailHash: _h, mobileEnc, ...contact } = out.portal.contact;
+    const reveal = role !== 'VIEWER' && cipher;
+    out.portal = { ...out.portal, link: out.portal.link ? { ...out.portal.link, hash: '' } : undefined, contact: { ...contact, ...(reveal ? { email: safe(() => cipher.decrypt(emailEnc)), mobile: mobileEnc ? safe(() => cipher.decrypt(mobileEnc)) : undefined } : {}) } as never };
+  }
   // never send invite hashes or the encrypted Emirates ID to the browser
   if (out.uaepass) {
     delete out.uaepass.inviteHash;
@@ -117,7 +131,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
     await audit(ctx, req, 'case.read_pii', `case:${c.id}`); // PII read is audited
     const [traces, webhooks, policy] = await Promise.all([ctx.store.traces.listByCase(c.id), ctx.store.webhooks.listByCase(c.id), ctx.policies.forAcquirer(c.acquirerCode)]);
     res.json({
-      case: present(c, req.user!.role), traces, webhooks: webhooks.map(({ bodyEnc: _b, ...w }) => w),
+      case: present(c, req.user!.role, ctx.cipher), traces, webhooks: webhooks.map(({ bodyEnc: _b, ...w }) => w),
       llmIsMock: ctx.llm.isMock, policy: { version: policy.version, confidenceThreshold: policy.policy.confidenceThreshold, uboThresholdPct: policy.policy.uboThresholdPct },
     });
   }));

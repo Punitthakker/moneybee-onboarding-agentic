@@ -11,6 +11,7 @@ import { pdfPages } from '../util/pdf';
 const FILENAME_HINTS: [RegExp, DocType][] = [
   [/licen[cs]e/i, 'trade_licence'], [/emirates|eid/i, 'emirates_id'], [/passport/i, 'passport'], [/visa/i, 'residence_visa'], [/ejari|lease/i, 'lease_ejari'],
   [/iban|bank.?letter/i, 'bank_letter'], [/vat|trn/i, 'vat_certificate'], [/moa|aoa|memorandum/i, 'moa_aoa'],
+  [/ubo|beneficial/i, 'ubo_declaration'], [/shareholder/i, 'register_of_shareholders'], [/resolution.*branch|branch.*resolution/i, 'branch_board_resolution'],
 ];
 
 /** Classifier agent: labels each file (and each segment of a multi-document PDF). */

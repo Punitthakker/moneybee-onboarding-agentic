@@ -14,11 +14,12 @@ export interface PackFile { name: string; sha256: string; kind: string }
 export interface Case {
   id: string; ref: string; name: string; legalName?: string; status: string; entityType?: string; entityTypeRequested: string; acquirerCode: string; ownerEmail: string; createdAt: string; updatedAt: string;
   files: FileRec[]; documents: DocRec[]; fields: Record<string, CaseField>; directors: Person[]; shareholders: Person[]; signatories: Person[]; findings: Finding[];
-  checklist: { docType: string; required: boolean; received: boolean; docIds: string[]; expired: boolean }[]; ubo?: UboResult; screening?: Screening; risk?: Risk;
+  checklist: { docType: string; required: boolean; received: boolean; docIds: string[]; expired: boolean; reason?: string }[]; ubo?: UboResult; screening?: Screening; risk?: Risk;
   gaps?: { items: { kind: string; message: string }[]; draftMessage: string }; pack?: { acquirerCode: string; files: PackFile[]; submission: { mode: string; reference: string | null; isMock: boolean } | null };
   reviews: Review[]; needsReviewFields: string[]; injectionSuspected: boolean; usage: { tokens: number; budget: number; calls: number }; policyVersion?: number; modelVersion?: string; promptVersion?: string;
   run?: { seq: number; state: string; error?: string; startedAt?: string; finishedAt?: string };
   uaepass?: UaePassCase;
+  portal?: { source: 'merchant_portal' | 'ops_link'; contact: { name: string; emailMasked: string; email?: string; mobile?: string }; answers: Record<string, string | boolean>; locale: 'en' | 'ar'; link?: { expiresAt: string; sentAt: string }; uploads: { fileId: string; slot?: string; at: string }[]; submittedAt?: string; lastSeenAt?: string };
   completion?: { merchantId: string; sqlCaseId: string; sqlWrittenAt: string; tokenId: string; tokenExpiresAt: string; completedBy: string };
 }
 export interface Trace { id: string; agent: string; step: string; status: string; startedAt: string; durationMs: number; model?: string; promptVersion?: string; tokensIn?: number; tokensOut?: number; output?: Json; summary?: string; toolCalls?: { name: string; input: Json; resultSummary?: string }[]; error?: string; runSeq: number }
@@ -30,8 +31,10 @@ export const DOC_LABELS: Record<string, string> = {
   register_of_directors: 'Register of directors', authorised_signatory_letter: 'Signatory letter / POA', emirates_id: 'Emirates ID', passport: 'Passport', residence_visa: 'Residence visa', lease_ejari: 'Lease / Ejari',
   bank_letter: 'Bank letter / IBAN', bank_statement: 'Bank statement', vat_certificate: 'VAT certificate', ubo_declaration: 'UBO declaration', website_description: 'Website / product', processing_statement: 'Processing statement',
   company_profile: 'Company profile', corporate_shareholder_docs: 'Corporate shareholder docs', unknown: 'Unclassified',
+  parent_company_documents: 'Parent company docs', branch_board_resolution: 'Branch board resolution', parent_ownership_chart: 'Parent ownership chart',
+  chamber_certificate: 'Chamber certificate', incumbency_certificate: 'Incumbency certificate', local_service_agent_agreement: 'Local service agent agreement',
 };
-export const ENTITY_LABELS: Record<string, string> = { auto: 'Auto-detect', sole_establishment: 'Sole establishment', llc: 'LLC (mainland)', free_zone: 'Free zone company', mainland: 'Mainland (DET / emirate)' };
+export const ENTITY_LABELS: Record<string, string> = { auto: 'Auto-detect', sole_establishment: 'Sole establishment', llc: 'LLC (mainland)', free_zone: 'Free zone company', mainland: 'Mainland (DET / emirate)', branch: 'Branch' };
 export const FIELD_LABELS: Record<string, string> = {
   'company.legalName': 'Legal name', 'company.tradeName': 'Trade name', 'company.legalForm': 'Legal form', 'company.incorporationDate': 'Incorporation date', 'company.trn': 'VAT TRN', 'company.registeredAddress': 'Registered address', 'company.website': 'Website',
   'licence.number': 'Licence number', 'licence.authority': 'Issuing authority', 'licence.issueDate': 'Issue date', 'licence.expiryDate': 'Expiry date', 'licence.activities': 'Licensed activities',
@@ -42,7 +45,7 @@ export const SECTIONS: { title: string; prefix: string }[] = [
   { title: 'Company', prefix: 'company.' }, { title: 'Licence', prefix: 'licence.' }, { title: 'Banking', prefix: 'banking.' }, { title: 'Expected activity', prefix: 'activity.' },
 ];
 export const STATUS_TONE: Record<string, string> = {
-  RECEIVED: '', CLASSIFIED: '', EXTRACTED: '', VERIFIED: '', UBO_RESOLVED: '', SCREENED: '', RISK_SCORED: '', PACK_BUILT: '', AWAITING_REVIEW: 'warn', NEEDS_INFO: 'warn', APPROVED: 'ok', REJECTED: 'bad', COMPLETED: 'dark',
+  DRAFT: 'warn', RECEIVED: '', CLASSIFIED: '', EXTRACTED: '', VERIFIED: '', UBO_RESOLVED: '', SCREENED: '', RISK_SCORED: '', PACK_BUILT: '', AWAITING_REVIEW: 'warn', NEEDS_INFO: 'warn', APPROVED: 'ok', REJECTED: 'bad', COMPLETED: 'dark',
 };
 export const fmt = (v: unknown): string => (v === null || v === undefined || v === '' ? '-' : Array.isArray(v) ? v.join('; ') : typeof v === 'number' ? v.toLocaleString('en-US') : String(v));
 export const ago = (iso: string) => {

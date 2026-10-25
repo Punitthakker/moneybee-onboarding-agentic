@@ -1,5 +1,6 @@
 import type {
   AcquirerConfig,
+  Answers,
   CaseField,
   CaseStatus,
   DocType,
@@ -138,6 +139,21 @@ export interface ChecklistItem {
   received: boolean;
   docIds: string[];
   expired: boolean;
+  /** why a conditional document is required (from the merchant's answers) */
+  reason?: string;
+}
+
+/** Self-serve merchant portal state. Contact email and mobile are stored encrypted, with a keyed hash for "resume by email". */
+export interface CasePortal {
+  source: 'merchant_portal' | 'ops_link';
+  contact: { name: string; emailEnc: string; emailHash: string; emailMasked: string; mobileEnc?: string };
+  answers: Answers;
+  locale: 'en' | 'ar';
+  /** current magic link (hash only); a new link replaces the previous one */
+  link?: { hash: string; expiresAt: string; sentAt: string };
+  uploads: { fileId: string; slot?: DocType; at: string }[];
+  submittedAt?: string;
+  lastSeenAt?: string;
 }
 
 /** UAE PASS state for a case. Emirates ID number is stored encrypted plus a keyed hash, never in plain text. */
@@ -198,6 +214,7 @@ export interface CaseRec {
   promptVersion?: string;
   run?: { seq: number; state: 'idle' | 'queued' | 'running' | 'failed' | 'done'; startedAt?: string; finishedAt?: string; error?: string };
   uaepass?: CaseUaePass;
+  portal?: CasePortal;
   completion?: {
     merchantId: string;
     sqlCaseId: string;
@@ -291,6 +308,8 @@ export interface TenantRec extends Tenant {
   createdAt: string;
   updatedAt: string;
   updatedBy: string;
+  /** company types already offered to this tenant from its file; new ones in the file are added once, removals by an admin stick */
+  seededEntityTypes?: EntityType[];
 }
 
 export interface CaseListFilter {
@@ -300,6 +319,8 @@ export interface CaseListFilter {
   q?: string;
   entityType?: EntityType;
   acquirer?: string;
+  /** merchant portal: cases whose contact email has this keyed hash */
+  portalEmailHash?: string;
   limit?: number;
 }
 

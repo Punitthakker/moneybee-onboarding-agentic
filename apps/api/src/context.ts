@@ -11,6 +11,7 @@ import type { OnboardingRepository } from './sql/repository';
 import type { AcquirerAdapter } from './agents/packbuilder';
 import type { UaePassProvider } from './integrations/uaepass/types';
 import type { TenantService } from './tenancy/service';
+import type { Mailer } from './mail';
 
 export interface Ctx {
   cfg: Config;
@@ -26,6 +27,7 @@ export interface Ctx {
   screening: ScreeningProvider;
   adapters: Record<string, AcquirerAdapter>;
   uaepass: UaePassProvider;
+  mailer: Mailer;
   /** secret used for signing short-lived file URLs */
   fileUrlSecret: string;
   now: () => Date;

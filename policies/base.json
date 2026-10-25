@@ -31,7 +31,40 @@
         "activity.mcc",
         "activity.expectedMonthlyVolume",
         "activity.expectedAvgTicket"
-      ]
+      ],
+      "label": "Sole establishment",
+      "labelAr": "مؤسسة فردية",
+      "description": "One owner trading under a commercial or professional licence, including civil companies.",
+      "descriptionAr": "مالك واحد يعمل برخصة تجارية أو مهنية، بما في ذلك الشركات المدنية.",
+      "conditionalDocuments": [
+        {
+          "docType": "vat_certificate",
+          "when": [
+            {
+              "question": "vat_registered",
+              "equals": true
+            }
+          ],
+          "reason": "You told us the business is VAT registered.",
+          "reasonAr": "ذكرت أن النشاط مسجل في ضريبة القيمة المضافة."
+        },
+        {
+          "docType": "local_service_agent_agreement",
+          "when": [
+            {
+              "question": "licence_kind",
+              "equals": "professional"
+            },
+            {
+              "question": "owner_uae_national",
+              "equals": false
+            }
+          ],
+          "reason": "A professional licence held by a non-UAE national needs a local service agent.",
+          "reasonAr": "الرخصة المهنية لغير المواطنين تتطلب وكيل خدمات محلي."
+        }
+      ],
+      "docRules": {}
     },
     "llc": {
       "requiredDocuments": [
@@ -65,7 +98,47 @@
         "activity.mcc",
         "activity.expectedMonthlyVolume",
         "activity.expectedAvgTicket"
-      ]
+      ],
+      "label": "Mainland LLC",
+      "labelAr": "شركة ذات مسؤولية محدودة (البر الرئيسي)",
+      "description": "Limited liability company licensed by the Department of Economy and Tourism or another emirate authority.",
+      "descriptionAr": "شركة ذات مسؤولية محدودة مرخصة من دائرة الاقتصاد والسياحة أو جهة الترخيص في الإمارة.",
+      "conditionalDocuments": [
+        {
+          "docType": "vat_certificate",
+          "when": [
+            {
+              "question": "vat_registered",
+              "equals": true
+            }
+          ],
+          "reason": "You told us the business is VAT registered.",
+          "reasonAr": "ذكرت أن النشاط مسجل في ضريبة القيمة المضافة."
+        },
+        {
+          "docType": "corporate_shareholder_docs",
+          "when": [
+            {
+              "question": "has_corporate_shareholders",
+              "equals": true
+            }
+          ],
+          "reason": "A company owns shares in your business, so we need its documents to find the people behind it.",
+          "reasonAr": "توجد شركة مساهمة في نشاطك، لذا نحتاج مستنداتها لمعرفة المالكين الفعليين."
+        },
+        {
+          "docType": "chamber_certificate",
+          "when": [
+            {
+              "question": "chamber_member",
+              "equals": true
+            }
+          ],
+          "reason": "You told us the company is a chamber of commerce member.",
+          "reasonAr": "ذكرت أن الشركة عضو في غرفة التجارة."
+        }
+      ],
+      "docRules": {}
     },
     "free_zone": {
       "requiredDocuments": [
@@ -101,7 +174,50 @@
         "activity.mcc",
         "activity.expectedMonthlyVolume",
         "activity.expectedAvgTicket"
-      ]
+      ],
+      "label": "Free zone company",
+      "labelAr": "شركة منطقة حرة",
+      "description": "FZE, FZCO or FZ-LLC in DMCC, IFZA, RAKEZ, DIFC, ADGM, JAFZA, Meydan and other free zones.",
+      "descriptionAr": "شركة FZE أو FZCO أو FZ-LLC في مناطق حرة مثل DMCC وIFZA وRAKEZ وDIFC وADGM وJAFZA وميدان.",
+      "conditionalDocuments": [
+        {
+          "docType": "vat_certificate",
+          "when": [
+            {
+              "question": "vat_registered",
+              "equals": true
+            }
+          ],
+          "reason": "You told us the business is VAT registered.",
+          "reasonAr": "ذكرت أن النشاط مسجل في ضريبة القيمة المضافة."
+        },
+        {
+          "docType": "corporate_shareholder_docs",
+          "when": [
+            {
+              "question": "has_corporate_shareholders",
+              "equals": true
+            }
+          ],
+          "reason": "A company owns shares in your business, so we need its documents to find the people behind it.",
+          "reasonAr": "توجد شركة مساهمة في نشاطك، لذا نحتاج مستنداتها لمعرفة المالكين الفعليين."
+        },
+        {
+          "docType": "incumbency_certificate",
+          "when": [
+            {
+              "question": "free_zone_authority",
+              "in": [
+                "ADGM",
+                "DIFC"
+              ]
+            }
+          ],
+          "reason": "ADGM and DIFC registries issue a certificate of incumbency.",
+          "reasonAr": "يصدر سجل سوق أبوظبي العالمي ومركز دبي المالي العالمي شهادة شاغلي المناصب."
+        }
+      ],
+      "docRules": {}
     },
     "mainland": {
       "requiredDocuments": [
@@ -136,7 +252,145 @@
         "activity.mcc",
         "activity.expectedMonthlyVolume",
         "activity.expectedAvgTicket"
-      ]
+      ],
+      "label": "Mainland company (other forms)",
+      "labelAr": "شركة في البر الرئيسي (أشكال أخرى)",
+      "description": "Other mainland legal forms licensed by an emirate authority, for example a private or public joint stock company.",
+      "descriptionAr": "أشكال قانونية أخرى في البر الرئيسي مرخصة من جهة الإمارة، مثل الشركات المساهمة الخاصة أو العامة.",
+      "conditionalDocuments": [
+        {
+          "docType": "vat_certificate",
+          "when": [
+            {
+              "question": "vat_registered",
+              "equals": true
+            }
+          ],
+          "reason": "You told us the business is VAT registered.",
+          "reasonAr": "ذكرت أن النشاط مسجل في ضريبة القيمة المضافة."
+        },
+        {
+          "docType": "corporate_shareholder_docs",
+          "when": [
+            {
+              "question": "has_corporate_shareholders",
+              "equals": true
+            }
+          ],
+          "reason": "A company owns shares in your business, so we need its documents to find the people behind it.",
+          "reasonAr": "توجد شركة مساهمة في نشاطك، لذا نحتاج مستنداتها لمعرفة المالكين الفعليين."
+        },
+        {
+          "docType": "chamber_certificate",
+          "when": [
+            {
+              "question": "chamber_member",
+              "equals": true
+            }
+          ],
+          "reason": "You told us the company is a chamber of commerce member.",
+          "reasonAr": "ذكرت أن الشركة عضو في غرفة التجارة."
+        }
+      ],
+      "docRules": {}
+    },
+    "branch": {
+      "label": "Branch of a UAE or foreign company",
+      "labelAr": "فرع لشركة إماراتية أو أجنبية",
+      "description": "A mainland or free zone branch whose owner is a parent company in the UAE or abroad.",
+      "descriptionAr": "فرع في البر الرئيسي أو منطقة حرة تملكه شركة أم داخل الدولة أو خارجها.",
+      "requiredDocuments": [
+        "trade_licence",
+        "parent_company_documents",
+        "branch_board_resolution",
+        "parent_ownership_chart",
+        "emirates_id",
+        "passport",
+        "lease_ejari",
+        "bank_letter",
+        "website_description"
+      ],
+      "optionalDocuments": [
+        "vat_certificate",
+        "authorised_signatory_letter",
+        "residence_visa",
+        "bank_statement",
+        "processing_statement",
+        "company_profile",
+        "corporate_shareholder_docs",
+        "moa_aoa",
+        "register_of_directors"
+      ],
+      "requiredFields": [
+        "company.legalName",
+        "licence.number",
+        "licence.authority",
+        "licence.expiryDate",
+        "company.registeredAddress",
+        "banking.iban",
+        "activity.mcc",
+        "activity.expectedMonthlyVolume",
+        "activity.expectedAvgTicket"
+      ],
+      "conditionalDocuments": [
+        {
+          "docType": "vat_certificate",
+          "when": [
+            {
+              "question": "vat_registered",
+              "equals": true
+            }
+          ],
+          "reason": "You told us the business is VAT registered.",
+          "reasonAr": "ذكرت أن النشاط مسجل في ضريبة القيمة المضافة."
+        },
+        {
+          "docType": "incumbency_certificate",
+          "when": [
+            {
+              "question": "parent_location",
+              "equals": "foreign"
+            }
+          ],
+          "reason": "The parent company is outside the UAE, so we need a recent good standing or incumbency certificate.",
+          "reasonAr": "الشركة الأم خارج الدولة، لذا نحتاج شهادة حسن سيرة أو شهادة شاغلي المناصب حديثة."
+        },
+        {
+          "docType": "corporate_shareholder_docs",
+          "when": [
+            {
+              "question": "has_corporate_shareholders",
+              "equals": true
+            }
+          ],
+          "reason": "A company owns shares in your business, so we need its documents to find the people behind it.",
+          "reasonAr": "توجد شركة مساهمة في نشاطك، لذا نحتاج مستنداتها لمعرفة المالكين الفعليين."
+        }
+      ],
+      "docRules": {
+        "trade_licence": {
+          "hint": "The branch licence, not the parent company licence.",
+          "hintAr": "رخصة الفرع وليست رخصة الشركة الأم."
+        },
+        "emirates_id": {
+          "perPerson": "branch_manager",
+          "hint": "Emirates ID of the branch manager and each authorised signatory.",
+          "hintAr": "الهوية الإماراتية لمدير الفرع وكل مفوض بالتوقيع."
+        },
+        "passport": {
+          "perPerson": "branch_manager",
+          "hint": "Passport of the branch manager and each authorised signatory.",
+          "hintAr": "جواز سفر مدير الفرع وكل مفوض بالتوقيع."
+        },
+        "parent_ownership_chart": {
+          "satisfiedBy": [
+            "ubo_declaration",
+            "register_of_shareholders"
+          ],
+          "hint": "Who owns the parent company, up to the people who own 25% or more.",
+          "hintAr": "ملكية الشركة الأم وصولاً إلى الأشخاص الذين يملكون 25% أو أكثر."
+        }
+      }
     }
   },
   "licenceNumberPatterns": {
@@ -188,5 +442,194 @@
   "retention": {
     "closedCaseDays": 2555,
     "rejectedCaseDays": 365
+  },
+  "questions": [
+    {
+      "id": "vat_registered",
+      "label": "Is the business registered for VAT?",
+      "labelAr": "هل النشاط مسجل في ضريبة القيمة المضافة؟",
+      "type": "boolean"
+    },
+    {
+      "id": "licence_kind",
+      "label": "What kind of licence do you hold?",
+      "labelAr": "ما نوع الرخصة؟",
+      "type": "select",
+      "entityTypes": [
+        "sole_establishment"
+      ],
+      "options": [
+        {
+          "value": "commercial",
+          "label": "Commercial",
+          "labelAr": "تجارية"
+        },
+        {
+          "value": "professional",
+          "label": "Professional",
+          "labelAr": "مهنية"
+        }
+      ]
+    },
+    {
+      "id": "owner_uae_national",
+      "label": "Is the owner a UAE national?",
+      "labelAr": "هل المالك مواطن إماراتي؟",
+      "type": "boolean",
+      "entityTypes": [
+        "sole_establishment"
+      ]
+    },
+    {
+      "id": "has_corporate_shareholders",
+      "label": "Does another company own shares in your business?",
+      "labelAr": "هل تملك شركة أخرى حصصاً في نشاطك؟",
+      "type": "boolean",
+      "entityTypes": [
+        "llc",
+        "free_zone",
+        "mainland",
+        "branch"
+      ]
+    },
+    {
+      "id": "chamber_member",
+      "label": "Is the company a chamber of commerce member?",
+      "labelAr": "هل الشركة عضو في غرفة التجارة؟",
+      "type": "boolean",
+      "entityTypes": [
+        "llc",
+        "mainland"
+      ]
+    },
+    {
+      "id": "free_zone_authority",
+      "label": "Which free zone issued your licence?",
+      "labelAr": "ما المنطقة الحرة التي أصدرت رخصتك؟",
+      "type": "select",
+      "entityTypes": [
+        "free_zone"
+      ],
+      "options": [
+        {
+          "value": "DMCC",
+          "label": "DMCC"
+        },
+        {
+          "value": "IFZA",
+          "label": "IFZA"
+        },
+        {
+          "value": "RAKEZ",
+          "label": "RAKEZ"
+        },
+        {
+          "value": "DIFC",
+          "label": "DIFC"
+        },
+        {
+          "value": "ADGM",
+          "label": "ADGM"
+        },
+        {
+          "value": "JAFZA",
+          "label": "JAFZA"
+        },
+        {
+          "value": "Meydan",
+          "label": "Meydan"
+        },
+        {
+          "value": "DAFZA",
+          "label": "DAFZA"
+        },
+        {
+          "value": "SHAMS",
+          "label": "SHAMS"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "id": "parent_location",
+      "label": "Where is the parent company registered?",
+      "labelAr": "أين سُجلت الشركة الأم؟",
+      "type": "select",
+      "entityTypes": [
+        "branch"
+      ],
+      "options": [
+        {
+          "value": "uae",
+          "label": "In the UAE",
+          "labelAr": "داخل الدولة"
+        },
+        {
+          "value": "foreign",
+          "label": "Outside the UAE",
+          "labelAr": "خارج الدولة"
+        }
+      ]
+    }
+  ],
+  "documentRules": {
+    "trade_licence": {
+      "hint": "Current licence showing all pages, including the activities and owners.",
+      "hintAr": "الرخصة السارية بكل صفحاتها، بما فيها الأنشطة والملاك."
+    },
+    "emirates_id": {
+      "perPerson": "each_ubo_and_signatory",
+      "hint": "Front and back, for every owner of 25% or more and every authorised signatory.",
+      "hintAr": "الوجه والظهر، لكل مالك 25% أو أكثر ولكل مفوض بالتوقيع."
+    },
+    "passport": {
+      "perPerson": "each_ubo_and_signatory",
+      "hint": "Photo page, for every owner of 25% or more and every authorised signatory.",
+      "hintAr": "صفحة الصورة، لكل مالك 25% أو أكثر ولكل مفوض بالتوقيع."
+    },
+    "residence_visa": {
+      "perPerson": "each_ubo_and_signatory",
+      "hint": "For owners and signatories who are UAE residents.",
+      "hintAr": "للملاك والمفوضين المقيمين في الدولة."
+    },
+    "lease_ejari": {
+      "hint": "Ejari, tenancy contract or flexi-desk agreement for the business address.",
+      "hintAr": "إيجاري أو عقد الإيجار أو عقد المكتب المرن لعنوان النشاط."
+    },
+    "bank_letter": {
+      "maxAgeDays": 90,
+      "hint": "Bank letter or IBAN certificate in the business name, issued in the last 3 months.",
+      "hintAr": "خطاب بنكي أو شهادة آيبان باسم النشاط صادرة خلال آخر 3 أشهر."
+    },
+    "moa_aoa": {
+      "hint": "Latest memorandum and articles, with any amendments.",
+      "hintAr": "أحدث عقد تأسيس ونظام أساسي مع أي تعديلات."
+    },
+    "authorised_signatory_letter": {
+      "hint": "Board resolution, power of attorney or letter naming who can sign for the company.",
+      "hintAr": "قرار مجلس الإدارة أو وكالة أو خطاب يحدد المفوضين بالتوقيع."
+    },
+    "ubo_declaration": {
+      "hint": "Signed declaration of the people who own or control 25% or more.",
+      "hintAr": "إقرار موقع بالأشخاص الذين يملكون أو يسيطرون على 25% أو أكثر."
+    },
+    "website_description": {
+      "hint": "Your website link or a short description of what you sell, expected monthly sales and average ticket.",
+      "hintAr": "رابط موقعك أو وصف مختصر لما تبيعه والمبيعات الشهرية المتوقعة ومتوسط قيمة العملية."
+    },
+    "parent_company_documents": {
+      "satisfiedBy": [
+        "certificate_of_incorporation"
+      ],
+      "hint": "Parent company licence or certificate of incorporation and its articles. Foreign documents must be attested.",
+      "hintAr": "رخصة الشركة الأم أو شهادة التأسيس والنظام الأساسي. المستندات الأجنبية يجب أن تكون مصدقة."
+    },
+    "branch_board_resolution": {
+      "hint": "Parent board resolution approving the branch and appointing the branch manager.",
+      "hintAr": "قرار مجلس إدارة الشركة الأم بفتح الفرع وتعيين مديره."
+    }
   }
 }

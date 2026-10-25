@@ -32,3 +32,13 @@ The checks are labelled **policy checks**. The product does not assert legal or 
 - **Merchant session** is a separate httpOnly cookie. Share requests and signing need both the invite and that session, so the link alone is not enough.
 - **Documents** shared through UAE PASS enter intake like any other file (encrypted storage, hashing, dedupe) and carry `provenance: issuer_verified`. The verifier still runs. The no-automatic-approval rule is unchanged.
 - **Audit**: login, share request, approval, decline, expiry, ingestion and signing events are all recorded.
+
+## Merchant self-serve portal
+- **Magic links** (`mb_ml_` prefix, 256-bit random) are stored as SHA-256 hashes, compared in constant time and expire after `PORTAL_LINK_TTL_HOURS` (72 h). A link may be opened more than once in its lifetime (phone and laptop); asking for a new link replaces the old one, which then stops working.
+- **The token never reaches a server log.** Emails link to `/apply/link#<token>`: the token sits in the URL fragment, which browsers do not send. The page posts it once (CSRF header required) and removes it from the address bar and history.
+- **Merchant session** is a separate signed, httpOnly, SameSite=Lax cookie (`mb_portal`, `PORTAL_SESSION_HOURS`) scoped to one case. It is distinct from ops sessions and from the UAE PASS merchant session.
+- **No account enumeration.** "Resume by email" answers the same way whether or not an application exists, and only looks inside the tenant of the page.
+- **Contact details** (email, mobile) are encrypted with the PII cipher; email is matched by keyed hash and shown masked to the merchant and to viewers.
+- **Merchant view is an allow-list.** The portal API returns the checklist, file names, detected document types, merchant-facing status and missing-document requests only. Risk, findings, screening, notes and the link hash never leave the server.
+- **Rate limits.** Starting an application and asking for a link (both send email) are limited per IP; uploads, session exchange and reads have their own limits. Uploads reuse the intake checks (size, magic bytes, PDF parse, sanitised names).
+- **Audit.** Start, sign-in, uploads, file removal, answer changes, link resend and submit are recorded with a masked merchant actor.

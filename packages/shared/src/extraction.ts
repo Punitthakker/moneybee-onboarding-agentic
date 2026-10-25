@@ -65,6 +65,12 @@ export const DOC_FIELD_KEYS: Record<DocType, string[]> = {
   processing_statement: ['processorName', 'periodStart', 'periodEnd', 'monthlyVolume', 'avgTicket', 'chargebackRatioPct'],
   company_profile: ['legalName', 'tradeName', 'website', 'businessDescription', 'incorporationDate', 'mcc', 'expectedMonthlyVolume', 'expectedAvgTicket'],
   corporate_shareholder_docs: ['legalName', 'registrationNumber', 'jurisdiction', 'shareholders', 'directors'],
+  parent_company_documents: ['legalName', 'registrationNumber', 'jurisdiction', 'incorporationDate', 'authority', 'legalForm'],
+  branch_board_resolution: ['legalName', 'branchName', 'resolutionDate', 'branchManager', 'signatories'],
+  parent_ownership_chart: ['legalName', 'shareholders', 'declaredUbos', 'asOfDate'],
+  chamber_certificate: ['legalName', 'membershipNumber', 'issueDate', 'expiryDate'],
+  incumbency_certificate: ['legalName', 'registrationNumber', 'directors', 'shareholders', 'issueDate'],
+  local_service_agent_agreement: ['legalName', 'agentName', 'agentNationality', 'startDate', 'expiryDate'],
   unknown: [],
 };
 

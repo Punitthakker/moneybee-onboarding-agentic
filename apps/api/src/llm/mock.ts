@@ -11,6 +11,13 @@ import type { LlmClient, LlmRequest, LlmResult } from './client';
  */
 
 const TITLE_RULES: [RegExp, DocType][] = [
+  // branch documents first: they also mention incorporation and board resolutions
+  [/board\s+resolution.*branch|branch.*board\s+resolution|resolution\s+to\s+(open|establish)\s+a?\s*branch/i, 'branch_board_resolution'],
+  [/parent\s+company\s+(documents|certificate|licen[cs]e)/i, 'parent_company_documents'],
+  [/(parent|group)\s+(ownership|shareholding|structure)|ownership\s+(and\s+ubo\s+)?chart/i, 'parent_ownership_chart'],
+  [/certificate\s+of\s+(incumbency|good\s+standing)|incumbency\s+certificate/i, 'incumbency_certificate'],
+  [/chamber\s+of\s+commerce/i, 'chamber_certificate'],
+  [/local\s+service\s+agent/i, 'local_service_agent_agreement'],
   [/trade\s+licen[cs]e|commercial\s+licen[cs]e|رخصة\s*تجارية/i, 'trade_licence'],
   [/certificate\s+of\s+incorporation/i, 'certificate_of_incorporation'],
   [/memorandum|articles\s+of\s+association|\bmoa\b|\baoa\b/i, 'moa_aoa'],

@@ -4,9 +4,20 @@
   "kind": "white_label",
   "status": "active",
   "casePrefix": "BT",
-  "hostnames": ["botim.localhost"],
-  "locales": ["en", "ar"],
-  "enabledEntityTypes": ["sole_establishment", "llc", "free_zone", "mainland"],
+  "hostnames": [
+    "botim.localhost"
+  ],
+  "locales": [
+    "en",
+    "ar"
+  ],
+  "enabledEntityTypes": [
+    "sole_establishment",
+    "llc",
+    "free_zone",
+    "mainland",
+    "branch"
+  ],
   "branding": {
     "displayName": "Botim",
     "productName": "Business Onboarding",
@@ -22,7 +33,10 @@
       "surface": "#ffffff",
       "surfaceAlt": "#eef4fd"
     },
-    "fonts": { "sans": "'Inter', 'Helvetica Neue', Arial, sans-serif", "mono": "ui-monospace, Menlo, monospace" }
+    "fonts": {
+      "sans": "'Inter', 'Helvetica Neue', Arial, sans-serif",
+      "mono": "ui-monospace, Menlo, monospace"
+    }
   },
   "copy": {
     "welcomeTitle": "Start accepting payments with Botim.",
@@ -36,10 +50,20 @@
     "emailDomain": "onboard.botim.example"
   },
   "nudges": {
-    "cadenceHours": [1, 24, 72, 168],
+    "cadenceHours": [
+      1,
+      24,
+      72,
+      168
+    ],
     "maxAttempts": 4,
-    "quietHours": { "start": "21:00", "end": "09:00" },
+    "quietHours": {
+      "start": "21:00",
+      "end": "09:00"
+    },
     "timezone": "Asia/Dubai"
   },
-  "risk": { "prohibitedActivities": [] }
+  "risk": {
+    "prohibitedActivities": []
+  }
 }

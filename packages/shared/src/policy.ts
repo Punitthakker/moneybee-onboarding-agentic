@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import { DocTypeSchema, EntityTypeSchema, RiskRatingSchema } from './enums';
+import { DocRuleSchema, EntityRequirementExtras, QuestionSchema } from './requirements';
 
 export const EntityChecklistSchema = z.object({
   requiredDocuments: z.array(DocTypeSchema),
   optionalDocuments: z.array(DocTypeSchema).default([]),
   requiredFields: z.array(z.string()),
+  ...EntityRequirementExtras,
 });
 export type EntityChecklist = z.infer<typeof EntityChecklistSchema>;
 
@@ -16,6 +18,10 @@ export const PolicySchema = z.object({
   docExpiryWarnDays: z.number().int().nonnegative(),
   tokenTtlHours: z.number().positive().default(24),
   entityTypes: z.record(EntityTypeSchema, EntityChecklistSchema),
+  /** questions the merchant answers in the portal; they switch conditional documents on */
+  questions: z.array(QuestionSchema).default([]),
+  /** hints and substitutes per document type, shared by every company type (company types can override) */
+  documentRules: z.record(z.string(), DocRuleSchema).default({}),
   licenceNumberPatterns: z.record(z.string(), z.string()).default({}),
   highRiskJurisdictions: z.array(z.string()).default([]),
   mccRiskTiers: z.record(z.string(), z.enum(['LOW', 'MEDIUM', 'HIGH'])),

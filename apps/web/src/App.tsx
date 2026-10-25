@@ -10,6 +10,7 @@ import { Settings } from './pages/Settings';
 import { Toaster } from './components/ui';
 import { MerchantPortal } from './uaepass/Portal';
 import { SimLogin, SimShare, SimSign } from './uaepass/Sim';
+import { ApplyRoutes } from './portal/Portal';
 import { PoweredByMoneyBee, TenantMark, useTenantTheme, type PublicTenant } from './tenant';
 
 const MeCtx = createContext<Me | null>(null);
@@ -28,6 +29,7 @@ export function publicTenantPath() {
 export function App() {
   return (
     <Routes>
+      <Route path="/apply/*" element={<ApplyRoutes />} />
       <Route path="/m" element={<MerchantPortal />} />
       <Route path="/m/:invite" element={<MerchantPortal />} />
       <Route path="/sim/uaepass/login" element={<SimLogin />} />

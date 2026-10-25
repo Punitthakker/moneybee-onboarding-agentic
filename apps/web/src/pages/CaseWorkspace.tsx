@@ -6,10 +6,11 @@ import { useMe } from '../App';
 import { DocViewer } from '../components/DocViewer';
 import { OwnershipGraph } from '../components/OwnershipGraph';
 import { UaePassPanel } from '../uaepass/OpsPanel';
+import { MerchantPanel } from './MerchantPanel';
 import { Empty, Meter, MockBanner, Modal, RiskChip, StatusPill, toast } from '../components/ui';
 import { DOC_LABELS, ENTITY_LABELS, FIELD_LABELS, SECTIONS, fmt, type Case, type CaseField, type CaseResponse, type Person, type Trace } from '../types';
 
-type Tab = 'fields' | 'ownership' | 'risk' | 'output' | 'gaps' | 'uaepass';
+type Tab = 'fields' | 'ownership' | 'risk' | 'output' | 'gaps' | 'merchant' | 'uaepass';
 
 export function CaseWorkspace() {
   const { id = '' } = useParams();
@@ -115,7 +116,7 @@ export function CaseWorkspace() {
         {/* centre */}
         <div className="col">
           <div className="tabs" role="tablist">
-            {([['fields', 'Fields'], ['ownership', 'Ownership'], ['risk', 'Risk and decision'], ['output', 'Output'], ['gaps', `Gaps${c.gaps?.items.length ? ` (${c.gaps.items.length})` : ''}`], ['uaepass', 'UAE PASS']] as [Tab, string][]).map(([k, l]) => (
+            {([['fields', 'Fields'], ['ownership', 'Ownership'], ['risk', 'Risk and decision'], ['output', 'Output'], ['gaps', `Gaps${c.gaps?.items.length ? ` (${c.gaps.items.length})` : ''}`], ['merchant', 'Merchant portal'], ['uaepass', 'UAE PASS']] as [Tab, string][]).map(([k, l]) => (
               <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -124,6 +125,7 @@ export function CaseWorkspace() {
           {tab === 'risk' && <RiskPanel c={c} onChanged={refresh} />}
           {tab === 'output' && <OutputPanel c={c} webhooks={data.webhooks} onChanged={refresh} />}
           {tab === 'gaps' && <Gaps c={c} />}
+          {tab === 'merchant' && <MerchantPanel c={c} onChanged={refresh} />}
           {tab === 'uaepass' && <UaePassPanel c={c} onChanged={refresh} />}
         </div>
 

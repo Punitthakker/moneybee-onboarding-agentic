@@ -25,7 +25,11 @@ function personsFrom(docs: DocRec[], types: DocType[], key: string): Person[] {
   return [];
 }
 
+const BRANCH_DOCS: DocType[] = ['branch_board_resolution', 'parent_company_documents', 'parent_ownership_chart'];
+export const isBranchCase = (c: CaseRec) => c.entityTypeRequested === 'branch' || (c.entityTypeRequested === 'auto' && c.documents.some((d) => BRANCH_DOCS.includes(d.docType)));
+
 export function detectEntityType(c: CaseRec): EntityType {
+  if (isBranchCase(c)) return 'branch';
   const form = asStr(c.fields['company.legalForm']?.value).toLowerCase();
   const legal = asStr(c.fields['company.legalName']?.value).toLowerCase();
   const auth = asStr(c.fields['licence.authority']?.value).toLowerCase();
@@ -79,7 +83,12 @@ export function consolidate(c: CaseRec, policy: Policy): void {
       }
     }
   }
-  c.signatories = personsFrom(c.documents, ['authorised_signatory_letter'], 'signatories');
+  if (isBranchCase(c)) {
+    // a branch has no shareholders of its own: the parent company owns 100 percent, and the UBO resolver looks through the parent
+    const parent = [pickSource(c.documents, 'parent_ownership_chart', 'legalName'), pickSource(c.documents, 'parent_company_documents', 'legalName'), pickSource(c.documents, 'certificate_of_incorporation', 'legalName'), pickSource(c.documents, 'branch_board_resolution', 'legalName')].find(Boolean);
+    if (parent) c.shareholders = [{ name: asStr(parent.f.value), type: 'corporate', percentage: 100 }];
+  }
+  c.signatories = personsFrom(c.documents, ['authorised_signatory_letter', 'branch_board_resolution'], 'signatories');
 
   c.idHolders = [];
   for (const d of c.documents) {

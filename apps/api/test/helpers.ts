@@ -15,7 +15,7 @@ import type { Ctx } from '../src/context';
 export const EVAL_NOW = new Date('2026-10-22T08:00:00Z');
 
 export async function makeTestApp(env: Record<string, string> = {}) {
-  const cfg = loadConfig({ NODE_ENV: 'test', STORE: 'memory', REPO: 'memory', QUEUE_MODE: 'inline', LLM_MODE: 'mock', LOG_LEVEL: 'silent', JWT_SECRET: 'test-jwt-secret', PII_ENC_KEY: Buffer.alloc(32, 7).toString('base64'), WEBHOOK_BACKOFF_MS: '20', WEBHOOK_MAX_ATTEMPTS: '3', ...env });
+  const cfg = loadConfig({ NODE_ENV: 'test', STORE: 'memory', REPO: 'memory', QUEUE_MODE: 'inline', LLM_MODE: 'mock', LOG_LEVEL: 'silent', JWT_SECRET: 'test-jwt-secret', PII_ENC_KEY: Buffer.alloc(32, 7).toString('base64'), WEBHOOK_BACKOFF_MS: '20', WEBHOOK_MAX_ATTEMPTS: '3', MAILER: 'memory', PUBLIC_WEB_URL: 'http://web.test', ...env });
   const clock = { now: EVAL_NOW };
   const ctx: Ctx = await buildCtx(cfg, makeLogger('silent'), { store: createMemoryStore(), repo: createMemoryRepository(), blobs: createMemoryBlobStore(), now: () => clock.now });
   const queue = createInlineQueue(() => ctx, { awaitPipeline: true }) as ReturnType<typeof createInlineQueue> & { idle(): Promise<void> };

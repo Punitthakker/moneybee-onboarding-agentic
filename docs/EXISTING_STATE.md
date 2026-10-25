@@ -30,12 +30,12 @@ Inspection of `moneybee-onboarding-agentic` before the Botim white-label and Mon
 | Prompt section | Gap |
 |---|---|
 | 3. Multi-tenant white-label | No tenant model. Cases and users are global. No theming per partner, no "Powered by MoneyBee" lock |
-| 4. Entity types | No mainland **branch** type yet |
+| 4. Entity types | ~~No mainland **branch** type yet~~ Done in phase 2: branch type, requirements engine with questions and conditional documents |
 | 5. Input channels | No channel adapter layer, no WhatsApp, no per-application inbound email address or IMAP, no partner API key channel, no unified timeline across channels |
 | 7. Onboarding agent | Pipeline exists, but no merchant-facing conversation state machine, nudge scheduler, drop-off recovery or funnel analytics |
 | 8a. Risk data providers | Only MOCK screening. No Watchman, UN / UAE / OFAC lists, GLEIF, IBAN, MRZ, BIN rules or device risk |
 | 8b. MoneyBee Risk API | Not started (to be built in `moneybee-risk-datasources/api`) |
-| 10. Frontend | Merchant portal only reachable through a UAE PASS invite; no upload-first journey, entity picker or UBO builder for merchants |
+| 10. Frontend | ~~Merchant portal only reachable through a UAE PASS invite~~ Phase 2 added the upload-first portal at `/apply` (entity picker, questions, live checklist, magic-link resume). UBO builder and live extraction preview remain for later phases |
 | 12. Docker | No mail catcher, no Watchman, no OCR sidecar |
 
 ## Reuse versus replace

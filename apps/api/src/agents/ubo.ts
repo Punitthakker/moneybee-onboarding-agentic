@@ -15,7 +15,8 @@ export function resolveUbo(c: CaseRec, policy: Policy): UboResult {
   const rootName = String(c.fields['company.legalName']?.value ?? c.name);
   const registers = new Map<string, { name: string; holders: Person[] }>();
   for (const d of c.documents) {
-    if (d.docType !== 'corporate_shareholder_docs') continue;
+    // documents that describe a corporate owner and who holds it (for a branch: the parent company)
+    if (!['corporate_shareholder_docs', 'parent_ownership_chart', 'incumbency_certificate'].includes(d.docType)) continue;
     const name = String(d.fields?.legalName?.value ?? '');
     const holders = d.fields?.shareholders?.value;
     if (name && Array.isArray(holders)) registers.set(ck(name), { name, holders: holders as Person[] });

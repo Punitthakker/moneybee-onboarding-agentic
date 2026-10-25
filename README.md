@@ -29,7 +29,7 @@ Open **http://localhost:8080** and sign in with the admin or demo login printed 
 Add your `ANTHROPIC_API_KEY` to `.env` and run `docker compose up -d api` to switch from the MOCK fixture parser to live Claude.
 
 ### Try it
-1. `npm install && npm run fixtures` generates ten synthetic merchants in `fixtures/merchants` (or use the zips you make from them).
+1. `npm install && npm run fixtures` generates eleven synthetic merchants (11 is a branch of a foreign company) in `fixtures/merchants` (or use the zips you make from them).
 2. New case, drop a fixture folder (for example `05-layered-ubo`), choose an acquirer, click **Create case and run agents**.
 3. Watch the agent timeline. When the case reaches AWAITING_REVIEW, check flagged fields, open Ownership, then Risk and decision.
 4. Approve with notes (HIGH / REFER cases need a second reviewer: sign in as `second@moneybee.local`).
@@ -68,6 +68,21 @@ One codebase serves several brands. Each tenant has its own cases, users, audit 
 - **Branding.** Login, ops console and merchant portal take the tenant's logo, colours, fonts and copy. The merchant portal always uses the brand of the tenant that owns the case. The Botim logo and colours are **placeholders** until Botim supplies approved assets (see `tenants/README.md`).
 - **"Powered by MoneyBee"** is fixed: it comes from a platform constant, appears on every page, and any tenant update that tries to set it is rejected.
 - **API:** `GET /api/v1/public/tenant` (brand for a public page, by `?tenant=`, `x-moneybee-tenant` header or host name), `GET /api/v1/tenant` and `PUT /api/v1/tenant` (own tenant, ADMIN to edit).
+
+## Merchant self-serve portal (`/apply`)
+
+Merchants start on their own, upload in any order and come back on any device. No password.
+
+1. Open **http://localhost:8080/apply?tenant=botim** (or `/apply` for MoneyBee). Pick the company type, answer a few questions (they decide which documents are needed), enter the business name and contact, start.
+2. The browser is signed in straight away, and a private link is emailed. Read it in Mailpit: **http://localhost:8025**. The link opens `/apply/link#...` and works for 72 hours on any device. "Already started? Get a new link" sends a fresh one (the old one stops working).
+3. The checklist shows every document with a hint in plain words. Upload against an item or drop everything at once: files are classified on arrival and the count bar ("6 of 11 documents in") fills up. Answers can be changed and wrong files removed until the application is sent.
+4. **Send my application** runs the agents. The case appears in the ops console (status `DRAFT` before sending, then the usual flow), and the merchant sees "with our team", "we need a little more" or the decision.
+
+Underwriters can also email the portal to the merchant of a case they created: case, tab **Merchant portal**, **Email upload link**.
+
+Requirements per company type live in `policies/base.json` (`entityTypes`, `questions`, `documentRules`); see `docs/DECISIONS.md`. Company types: sole establishment, mainland LLC, free zone company, other mainland forms and **branch of a UAE or foreign company**.
+
+API: `GET /public/requirements`, `POST /public/applications`, `POST /public/applications/resume`, `POST /portal/session`, `GET|PATCH /portal/application`, `POST /portal/application/documents`, `DELETE /portal/application/files/:id`, `POST /portal/application/submit`, `POST /cases/:id/portal-link`.
 
 ## UAE PASS (mock and live)
 

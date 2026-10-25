@@ -1,4 +1,4 @@
-import { DOC_TYPE_LABELS, type DocType, type Policy } from '@moneybee/shared';
+import { DOC_TYPE_LABELS, buildChecklist, requirementsFor, type Policy } from '@moneybee/shared';
 import type { CaseRec, ChecklistItem, Finding, GapItem } from '../db/types';
 import { addressSimilarity, companySimilarity, nameSimilarity } from './names';
 
@@ -32,8 +32,8 @@ export function verifyCase(c: CaseRec, policy: Policy, now: Date): VerifyResult 
   const findings: Finding[] = [];
   const gaps: GapItem[] = [];
   const docStatus: VerifyResult['docStatus'] = {};
-  const entityType = c.entityType ?? 'llc';
-  const checklistDef = policy.entityTypes[entityType] ?? policy.entityTypes.llc!;
+  const entityType = c.entityType && policy.entityTypes[c.entityType] ? c.entityType : 'llc';
+  const checklistDef = policy.entityTypes[entityType]!;
 
   // 1. expiry
   for (const d of c.documents) {
@@ -101,7 +101,8 @@ export function verifyCase(c: CaseRec, policy: Policy, now: Date): VerifyResult 
     for (const d of c.documents) {
       const other = asStr(d.fields?.legalName?.value ?? (d.docType === 'bank_letter' || d.docType === 'bank_statement' ? d.fields?.accountName?.value : '') ?? '');
       // corporate shareholder documents describe a different (parent) entity by design
-      if (!other || ['trade_licence', 'corporate_shareholder_docs'].includes(d.docType)) continue;
+      if (!other || ['trade_licence', 'corporate_shareholder_docs', 'parent_company_documents', 'parent_ownership_chart', 'incumbency_certificate', 'branch_board_resolution'].includes(d.docType)) continue;
+      if (entityType === 'branch' && d.docType === 'certificate_of_incorporation') continue; // the parent's certificate
       const sim = companySimilarity(legal, other);
       if (sim < 0.85) findings.push({ code: 'LEGAL_NAME_MISMATCH', severity: 'warn', message: `Company name on ${DOC_TYPE_LABELS[d.docType]} ("${other}") differs from the licence ("${legal}").`, docIds: [d.id] });
     }
@@ -133,21 +134,23 @@ export function verifyCase(c: CaseRec, policy: Policy, now: Date): VerifyResult 
     findings.push({ code: 'INJECTION_SUSPECTED', severity: 'warn', message: 'A document contains instruction-like text aimed at an AI system. It was treated as data and ignored; this is recorded as a risk signal.', docIds: c.documents.filter((d) => d.injectionSuspected).map((d) => d.id) });
   }
 
-  // 10. checklist
+  // 10. checklist: the same requirements engine the merchant portal uses (answers switch conditional documents on)
   const checklist: ChecklistItem[] = [];
-  const receivedBy = (t: DocType) => c.documents.filter((d) => d.docType === t);
-  for (const t of checklistDef.requiredDocuments) {
-    const docs = receivedBy(t);
-    const expired = docs.length > 0 && docs.every((d) => docStatus[d.id] === 'EXPIRED');
-    checklist.push({ docType: t, required: true, received: docs.length > 0, docIds: docs.map((d) => d.id), expired });
-    if (!docs.length) {
-      findings.push({ code: 'MISSING_DOC', severity: 'fail', message: `Required document missing: ${DOC_TYPE_LABELS[t]}.` });
-      gaps.push({ kind: 'missing_document', docType: t, message: `Missing: ${DOC_TYPE_LABELS[t]}.` });
+  const reqs = requirementsFor(policy, entityType, c.portal?.answers ?? {});
+  const summary = buildChecklist(reqs, c.documents.map((d) => ({ id: d.id, docType: d.docType, issuedOn: d.issuedOn, expired: docStatus[d.id] === 'EXPIRED' })), now);
+  for (const it of summary.items) {
+    if (it.required) {
+      checklist.push({ docType: it.docType, required: true, received: it.docIds.length > 0, docIds: it.docIds, expired: it.status === 'expired', ...(it.conditional ? { reason: it.reason } : {}) });
+      if (!it.docIds.length) {
+        findings.push({ code: 'MISSING_DOC', severity: 'fail', message: `Required document missing: ${DOC_TYPE_LABELS[it.docType]}.${it.conditional && it.reason ? ` (${it.reason})` : ''}` });
+        gaps.push({ kind: 'missing_document', docType: it.docType, message: `Missing: ${DOC_TYPE_LABELS[it.docType]}.` });
+      } else if (it.status === 'too_old') {
+        findings.push({ code: 'DOC_TOO_OLD', severity: 'warn', message: `${DOC_TYPE_LABELS[it.docType]} is older than ${it.rule.maxAgeDays} days.`, docIds: it.docIds });
+        gaps.push({ kind: 'expired_document', docType: it.docType, message: `Please send a ${DOC_TYPE_LABELS[it.docType]} issued in the last ${it.rule.maxAgeDays} days.` });
+      }
+    } else if (it.docIds.length) {
+      checklist.push({ docType: it.docType, required: false, received: true, docIds: it.docIds, expired: false });
     }
-  }
-  for (const t of checklistDef.optionalDocuments) {
-    const docs = receivedBy(t);
-    if (docs.length) checklist.push({ docType: t, required: false, received: true, docIds: docs.map((d) => d.id), expired: false });
   }
 
   // 11. required fields

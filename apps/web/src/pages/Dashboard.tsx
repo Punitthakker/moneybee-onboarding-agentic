@@ -9,7 +9,7 @@ import { ENTITY_LABELS, ago } from '../types';
 interface Row { id: string; ref: string; name: string; status: string; entityType: string; acquirerCode: string; risk: string | null; confidence: number | null; needsReview: number; owner: string; createdAt: string; run: string; docs: number }
 interface Stats { casesToday: number; autoCompletedFieldsPct: number; avgTimeToPackSeconds: number; awaitingReview: number; total: number }
 
-const STATUS_FILTERS = ['', 'AWAITING_REVIEW', 'NEEDS_INFO', 'APPROVED', 'COMPLETED', 'REJECTED', 'RECEIVED'];
+const STATUS_FILTERS = ['', 'AWAITING_REVIEW', 'NEEDS_INFO', 'APPROVED', 'COMPLETED', 'REJECTED', 'RECEIVED', 'DRAFT'];
 
 export function Dashboard() {
   const me = useMe();

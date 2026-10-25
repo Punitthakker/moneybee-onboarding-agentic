@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_TENANT_ID, TenantSchema, TenantUpdateSchema, type Tenant, type TenantUpdate } from '@moneybee/shared';
 import type { Store, TenantRec } from '../db/types';
+import type { EntityType } from '@moneybee/shared';
+
+/** company types every tenant record created before seededEntityTypes existed was seeded with */
+const LAUNCH_ENTITY_TYPES: EntityType[] = ['sole_establishment', 'llc', 'free_zone', 'mainland'];
 
 function findTenantsDir(root: string): string | null {
   const env = process.env.TENANTS_DIR;
@@ -41,9 +45,15 @@ export class TenantService {
       const existing = await this.store.tenants.get(t.id);
       if (existing) {
         TenantSchema.parse(stripMeta(existing)); // a bad stored edit must fail loudly at boot
+        // company types added to the tenant file later (for example branch) are switched on once; an admin who removes one keeps it removed
+        const seeded = existing.seededEntityTypes ?? t.enabledEntityTypes.filter((x) => LAUNCH_ENTITY_TYPES.includes(x));
+        const added = t.enabledEntityTypes.filter((x) => !seeded.includes(x) && !existing.enabledEntityTypes.includes(x));
+        if (added.length || !existing.seededEntityTypes) {
+          await this.store.tenants.put({ ...existing, enabledEntityTypes: [...existing.enabledEntityTypes, ...added], seededEntityTypes: Array.from(new Set([...seeded, ...t.enabledEntityTypes])), updatedAt: now.toISOString(), updatedBy: added.length ? 'seed:entity-types' : existing.updatedBy });
+        }
         continue;
       }
-      await this.store.tenants.put({ ...t, createdAt: now.toISOString(), updatedAt: now.toISOString(), updatedBy: 'seed' });
+      await this.store.tenants.put({ ...t, seededEntityTypes: t.enabledEntityTypes, createdAt: now.toISOString(), updatedAt: now.toISOString(), updatedBy: 'seed' });
     }
     await this.reload();
   }
@@ -87,7 +97,7 @@ export class TenantService {
     if (!cur) throw new Error(`unknown tenant ${id}`);
     const p: TenantUpdate = TenantUpdateSchema.parse(patch);
     const merged = TenantSchema.parse({ ...stripMeta(cur), ...p });
-    const next: TenantRec = { ...merged, createdAt: cur.createdAt, updatedAt: now.toISOString(), updatedBy: by };
+    const next: TenantRec = { ...merged, seededEntityTypes: cur.seededEntityTypes, createdAt: cur.createdAt, updatedAt: now.toISOString(), updatedBy: by };
     await this.store.tenants.put(next);
     this.cache.set(id, next);
     return next;
@@ -95,6 +105,6 @@ export class TenantService {
 }
 
 function stripMeta(t: TenantRec): Tenant {
-  const { createdAt: _c, updatedAt: _u, updatedBy: _b, ...rest } = t;
+  const { createdAt: _c, updatedAt: _u, updatedBy: _b, seededEntityTypes: _s, ...rest } = t;
   return rest as Tenant;
 }

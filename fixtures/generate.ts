@@ -16,6 +16,9 @@ const ADDR = 'Unit 12, Fixture Tower, Demo Street, Dubai';
 type Page = string[];
 async function pdf(pages: Page[]): Promise<Uint8Array> {
   const d = await PDFDocument.create();
+  // fixed metadata so regenerating does not change existing fixture files
+  d.setCreationDate(new Date('2026-10-01T00:00:00Z'));
+  d.setModificationDate(new Date('2026-10-01T00:00:00Z'));
   const font = await d.embedFont(StandardFonts.Helvetica);
   const bold = await d.embedFont(StandardFonts.HelveticaBold);
   for (const lines of pages) {
@@ -54,6 +57,10 @@ const doc = {
   vat: (o: { legal: string }): Page[] => [[ 'VAT REGISTRATION CERTIFICATE', `Legal Name: ${o.legal}`, 'TRN: 100123456700003', `Registered Address: ${ADDR}`, 'Effective Date: 2024-01-01' ]],
   ubo: (o: { legal: string; ubos: { name: string; pct: number }[]; control?: boolean }): Page[] => [[ 'UBO DECLARATION', `Legal Name: ${o.legal}`, `Control By Other Means: ${o.control ? 'Yes' : 'No'}`, ...o.ubos.map((u, i) => `UBO ${i + 1}: ${u.name} | natural | ${u.pct} | Testland`), 'Signed Date: 2026-02-01' ]],
   website: (o: { extra?: string[] } = {}): Page[] => [[ 'WEBSITE AND PRODUCT DESCRIPTION', 'Website: https://example-synthetic.test', 'Business Description: Casual dining restaurant with online ordering', 'Products: Meals and beverages', 'MCC: 5812', 'Expected Monthly Volume: 300000', 'Expected Avg Ticket: 150', ...(o.extra ?? []) ]],
+  parentDocs: (o: { legal: string; reg: string; date: string; country: string }): Page[] => [[ 'PARENT COMPANY DOCUMENTS - CERTIFICATE OF INCORPORATION (ATTESTED)', `Legal Name: ${o.legal}`, `Registration Number: ${o.reg}`, `Jurisdiction: ${o.country}`, `Incorporation Date: ${o.date}`, `Authority: Registrar of Companies, ${o.country}`, 'Legal Form: Private Limited Company' ]],
+  branchResolution: (o: { parent: string; branch: string; manager: string }): Page[] => [[ 'PARENT BOARD RESOLUTION TO OPEN A BRANCH', `Legal Name: ${o.parent}`, `Branch Name: ${o.branch}`, 'Resolution Date: 2025-11-20', `Branch Manager: ${o.manager}`, `Authorised Signatory 1: ${o.manager} | Testland | Branch manager` ]],
+  ownershipChart: (o: { parent: string; sh: { name: string; type?: string; pct: number; nat?: string }[] }): Page[] => [[ 'PARENT OWNERSHIP AND UBO CHART', `Legal Name: ${o.parent}`, 'As Of Date: 2026-01-31', ...o.sh.map((s, i) => `Shareholder ${i + 1}: ${s.name} | ${s.type ?? 'natural'} | ${s.pct} | ${s.nat ?? 'Testland'}`) ]],
+  incumbency: (o: { parent: string; reg: string; dirs: string[]; sh: { name: string; type?: string; pct: number; nat?: string }[] }): Page[] => [[ 'CERTIFICATE OF INCUMBENCY', `Legal Name: ${o.parent}`, `Registration Number: ${o.reg}`, 'Issue Date: 2026-02-15', ...o.dirs.map((d, i) => `Director ${i + 1}: ${d} | Testland | Director`), ...o.sh.map((s, i) => `Shareholder ${i + 1}: ${s.name} | ${s.type ?? 'natural'} | ${s.pct} | ${s.nat ?? 'Testland'}`) ]],
   corp: (o: { legal: string; reg: string; sh: { name: string; type?: string; pct: number; nat?: string }[] }): Page[] => [[ 'CORPORATE SHAREHOLDER DOCUMENTS', `Legal Name: ${o.legal}`, `Registration Number: ${o.reg}`, 'Jurisdiction: Testland Free Zone', ...o.sh.map((s, i) => `Shareholder ${i + 1}: ${s.name} | ${s.type ?? 'natural'} | ${s.pct} | ${s.nat ?? 'Testland'}`) ]],
 };
 
@@ -295,6 +302,33 @@ const fixtures: { slug: string; files: Files; expected: Expected }[] = [];
       entityType: 'llc', description: 'One PDF bundles five documents (split by page range). Mohammed/Muhammad is a transliteration difference, not a mismatch. The trade name is marked illegible and must be flagged for review.',
       classification: { trade_licence: 1, emirates_id: 1, passport: 1, lease_ejari: 1, bank_letter: 1, moa_aoa: 1, register_of_shareholders: 1, authorised_signatory_letter: 1, ubo_declaration: 1, website_description: 1, vat_certificate: 1 },
       fields: baseFields(legal, 'SYN-100010'), ubos: [lic], rating: 'LOW', mustHaveFindings: ['LOW_CONFIDENCE'], mustNotHaveFindings: ['NAME_MISMATCH', 'MISSING_DOC'], needsReviewFields: ['company.tradeName'], injectionFlagged: false, screeningHit: false,
+    },
+  });
+}
+
+// 11. branch of a foreign company: the parent owns the branch 100 percent; UBOs are found through the parent
+{
+  const legal = 'Harbourline Logistics Branch';
+  const parent = 'Harbourline Holdings Limited';
+  const mgr = P('Yusuf Branchwala', 17);
+  const p1 = P('Leila Parento', 18);
+  const p2 = P('Omar Holdingsen', 19);
+  const psh = [{ name: p1.name, pct: 60 }, { name: p2.name, pct: 40 }];
+  fixtures.push({
+    slug: '11-branch-foreign-parent',
+    files: {
+      'branch_licence.pdf': doc.licence({ legal, no: 'SYN-110011', auth: AUTH_DET, form: 'Branch of Foreign Company', issue: '2025-12-01', expiry: '2027-11-30', owners: [parent], managers: [mgr.name] }),
+      'parent_incorporation.pdf': doc.parentDocs({ legal: parent, reg: 'TL-778899', date: '2012-06-01', country: 'Testland' }),
+      'board_resolution_branch.pdf': doc.branchResolution({ parent, branch: legal, manager: mgr.name }),
+      'ownership_chart.pdf': doc.ownershipChart({ parent, sh: psh }),
+      'incumbency.pdf': doc.incumbency({ parent, reg: 'TL-778899', dirs: [p1.name], sh: psh }),
+      'eid_manager.pdf': doc.eid(mgr), 'passport_manager.pdf': doc.passport(mgr), 'eid_p1.pdf': doc.eid(p1), 'eid_p2.pdf': doc.eid(p2),
+      'ejari.pdf': doc.lease({ tenant: legal }), 'bank_letter.pdf': doc.bank({ acct: legal }), 'website.pdf': doc.website(), 'vat.pdf': doc.vat({ legal }),
+    },
+    expected: {
+      entityType: 'branch', description: 'Branch of a foreign parent. The parent owns 100 percent; Leila Parento (60%) and Omar Holdingsen (40%) are UBOs through the parent. Parent documents carry the parent name by design and must not raise a legal name mismatch.',
+      classification: { trade_licence: 1, parent_company_documents: 1, branch_board_resolution: 1, parent_ownership_chart: 1, incumbency_certificate: 1, emirates_id: 3, passport: 1, lease_ejari: 1, bank_letter: 1, website_description: 1, vat_certificate: 1 },
+      fields: baseFields(legal, 'SYN-110011'), ubos: [p1.name, p2.name], rating: 'LOW', mustHaveFindings: [], mustNotHaveFindings: ['MISSING_DOC', 'LEGAL_NAME_MISMATCH', 'UBO_UNTRACED', 'NAME_MISMATCH'], injectionFlagged: false, screeningHit: false,
     },
   });
 }

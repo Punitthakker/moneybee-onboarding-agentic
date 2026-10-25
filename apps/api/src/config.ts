@@ -75,6 +75,16 @@ const EnvSchema = z.object({
   UAEPASS_SCOPE: z.string().default('urn:uae:digitalid:profile:general'),
   UAEPASS_ACR_VALUES: z.string().default('urn:safelayer:tws:policies:authentication:level:low'),
 
+  /** outbound email. Docker points this at Mailpit (smtp://mailpit:1025). */
+  SMTP_URL: z.string().optional(),
+  MAIL_FROM: z.string().default('MoneyBee Onboard <no-reply@moneybee.local>'),
+  /** smtp when SMTP_URL is set, otherwise log. memory is for tests. */
+  MAILER: z.enum(['smtp', 'memory', 'log']).optional(),
+  /** merchant self-serve portal */
+  PORTAL_LINK_TTL_HOURS: z.coerce.number().positive().default(72),
+  PORTAL_SESSION_HOURS: z.coerce.number().positive().default(12),
+  PORTAL_MAX_FILES: z.coerce.number().int().positive().default(60),
+
   MAIL_HOST: z.string().optional(),
   MAIL_USER: z.string().optional(),
   MAIL_PASS: z.string().optional(),

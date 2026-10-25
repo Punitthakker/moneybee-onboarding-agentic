@@ -38,7 +38,7 @@ export const fromDoc = <T>(d: Record<string, unknown> | null): T | null => {
 
 export async function createMongoStore(url: string): Promise<Store> {
   await mongoose.connect(url, { serverSelectionTimeoutMS: 15000 });
-  const Cases = loose('cases', [{ createdAt: -1 }, { status: 1 }, { tenantId: 1, createdAt: -1 }, { tenantId: 1, status: 1 }]);
+  const Cases = loose('cases', [{ createdAt: -1 }, { status: 1 }, { tenantId: 1, createdAt: -1 }, { tenantId: 1, status: 1 }, { 'portal.contact.emailHash': 1 }]);
   const Traces = loose('traces', [{ caseId: 1, startedAt: 1 }]);
   const Audit = loose('audit', [{ entity: 1, at: -1 }, { tenantId: 1, at: -1 }]);
   const Users = loose('users', [{ email: 1 }, { tenantId: 1 }]);
@@ -66,6 +66,7 @@ export async function createMongoStore(url: string): Promise<Store> {
         if (f.tenantId) q.tenantId = f.tenantId;
         if (f.status) q.status = f.status;
         if (f.acquirer) q.acquirerCode = f.acquirer;
+        if (f.portalEmailHash) q['portal.contact.emailHash'] = f.portalEmailHash;
         if (f.entityType) q.$or = [{ entityType: f.entityType }, { entityType: { $exists: false }, entityTypeRequested: f.entityType }];
         if (f.q) {
           const re = new RegExp(f.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');

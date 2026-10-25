@@ -4,9 +4,21 @@
   "kind": "platform",
   "status": "active",
   "casePrefix": "MB",
-  "hostnames": ["localhost", "127.0.0.1"],
-  "locales": ["en", "ar"],
-  "enabledEntityTypes": ["sole_establishment", "llc", "free_zone", "mainland"],
+  "hostnames": [
+    "localhost",
+    "127.0.0.1"
+  ],
+  "locales": [
+    "en",
+    "ar"
+  ],
+  "enabledEntityTypes": [
+    "sole_establishment",
+    "llc",
+    "free_zone",
+    "mainland",
+    "branch"
+  ],
   "branding": {
     "displayName": "MoneyBee",
     "productName": "Onboard",
@@ -22,7 +34,10 @@
       "surface": "#ffffff",
       "surfaceAlt": "#f6f1e6"
     },
-    "fonts": { "sans": "'Instrument Sans', 'Helvetica Neue', Arial, sans-serif", "mono": "'IBM Plex Mono', ui-monospace, Menlo, monospace" }
+    "fonts": {
+      "sans": "'Instrument Sans', 'Helvetica Neue', Arial, sans-serif",
+      "mono": "'IBM Plex Mono', ui-monospace, Menlo, monospace"
+    }
   },
   "copy": {
     "welcomeTitle": "Get your business ready to accept payments.",
@@ -34,10 +49,20 @@
     "supportEmail": "onboarding@moneybee.world"
   },
   "nudges": {
-    "cadenceHours": [1, 24, 72, 168],
+    "cadenceHours": [
+      1,
+      24,
+      72,
+      168
+    ],
     "maxAttempts": 4,
-    "quietHours": { "start": "21:00", "end": "09:00" },
+    "quietHours": {
+      "start": "21:00",
+      "end": "09:00"
+    },
     "timezone": "Asia/Dubai"
   },
-  "risk": { "prohibitedActivities": [] }
+  "risk": {
+    "prohibitedActivities": []
+  }
 }
