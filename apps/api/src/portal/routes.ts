@@ -58,6 +58,17 @@ export function portalRoutes(ctx: Ctx, queue: JobQueue): Router {
   const auditM = (c: CaseRec, action: string, req: Request, meta?: unknown) =>
     ctx.store.audit.add({ id: randomUUID(), tenantId: c.tenantId, actor: `merchant:${c.portal?.contact.emailMasked ?? 'portal'}`, action, entity: `case:${c.id}`, ip: req.ip ?? null, at: ctx.now().toISOString(), meta });
 
+  /** Email failures are logged (never the link) and reported to the caller instead of failing the request. */
+  const trySend = async (fn: () => Promise<void>, caseId: string) => {
+    try {
+      await fn();
+      return true;
+    } catch (e) {
+      ctx.log.error({ err: (e as Error).message, caseId }, 'portal email not sent');
+      return false;
+    }
+  };
+
   /* ---------------- public ---------------- */
 
   r.get('/public/requirements', reads, wrap(async (req, res) => {
@@ -99,10 +110,11 @@ export function portalRoutes(ctx: Ctx, queue: JobQueue): Router {
     };
     await ctx.store.cases.create(c);
     const { token } = await mintLink(ctx, c.id);
-    await sendLinkEmail(ctx, (await ctx.store.cases.get(c.id))!, b.contact.email, token, 'start');
-    await auditM(c, 'portal.application_started', req, { entityType: b.entityType });
+    // the application exists and this browser is signed in even if the email cannot be sent right now
+    const emailSent = await trySend(() => sendLinkEmail(ctx, c, b.contact.email, token, 'start'), c.id);
+    await auditM(c, 'portal.application_started', req, { entityType: b.entityType, emailSent });
     res.cookie(PORTAL_COOKIE, signPortalSession(ctx, c), cookieOpts);
-    res.status(201).json({ ref: c.ref, emailMasked: maskEmail(b.contact.email) });
+    res.status(201).json({ ref: c.ref, emailMasked: maskEmail(b.contact.email), emailSent });
   }));
 
   /** Always answers the same way, so it cannot be used to find out who has an application. */
@@ -112,8 +124,8 @@ export function portalRoutes(ctx: Ctx, queue: JobQueue): Router {
     const open = (await ctx.store.cases.list({ tenantId: t.id, portalEmailHash: emailHash(ctx, email), limit: 20 })).filter((c) => !['REJECTED', 'COMPLETED'].includes(c.status)).slice(0, 3);
     for (const c of open) {
       const { token } = await mintLink(ctx, c.id);
-      await sendLinkEmail(ctx, (await ctx.store.cases.get(c.id))!, email, token, 'resume');
-      await auditM(c, 'portal.link_resent', req);
+      const sent = await trySend(() => sendLinkEmail(ctx, c, email, token, 'resume'), c.id);
+      await auditM(c, 'portal.link_resent', req, { emailSent: sent });
     }
     res.status(202).json({ ok: true, emailMasked: maskEmail(email) });
   }));
@@ -265,7 +277,7 @@ export function portalRoutes(ctx: Ctx, queue: JobQueue): Router {
       if (b.locale && x.portal) x.portal.locale = b.locale;
     });
     const { token, expiresAt } = await mintLink(ctx, c.id);
-    await sendLinkEmail(ctx, (await ctx.store.cases.get(c.id))!, to, token, 'ops');
+    if (!(await trySend(async () => sendLinkEmail(ctx, (await ctx.store.cases.get(c.id))!, to!, token, 'ops'), c.id))) throw new HttpError(502, 'the email could not be sent; check the mail settings (SMTP_URL) and try again');
     await audit(ctx, req, 'portal.link_sent', `case:${c.id}`, { to: maskEmail(to) });
     res.status(201).json({ sentTo: maskEmail(to), expiresAt });
   }));

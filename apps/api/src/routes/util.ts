@@ -17,8 +17,10 @@ export function errorHandler(ctx: Ctx) {
     const e = err as { status?: number; statusCode?: number; message?: string; code?: string };
     const status = e.status ?? e.statusCode ?? 500;
     if (e.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'file too large' });
-    if (status >= 500) ctx.log.error({ err, reqId: req.reqId, path: req.path }, 'request failed');
-    res.status(status).json({ error: status >= 500 ? 'internal_error' : e.message ?? 'error', reqId: req.reqId });
+    // deliberate HttpErrors keep their message (for example 502 "email could not be sent"); anything else is masked
+    const deliberate = err instanceof HttpError;
+    if (status >= 500 && !deliberate) ctx.log.error({ err, reqId: req.reqId, path: req.path }, 'request failed');
+    res.status(status).json({ error: status >= 500 && !deliberate ? 'internal_error' : e.message ?? 'error', reqId: req.reqId });
   };
 }
 

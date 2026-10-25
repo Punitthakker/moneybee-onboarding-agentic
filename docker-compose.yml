@@ -38,7 +38,9 @@ x-api-env: &api-env
   SCREENING_PROVIDER: "${SCREENING_PROVIDER:-mock}"
   ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@moneybee.local}"
   # tenants/*.json are loaded into Mongo on first boot (MoneyBee platform + Botim white-label)
-  SMTP_URL: "${SMTP_URL:-smtp://mailpit:1025}"
+  # inside Docker the mail catcher is the mailpit service (SMTP_URL in .env is for running the API on the host)
+  SMTP_URL: "${DOCKER_SMTP_URL:-smtp://mailpit:1025}"
+  MAIL_FROM: "${MAIL_FROM:-MoneyBee Onboard <no-reply@moneybee.local>}"
   WATCHMAN_URL: "${WATCHMAN_URL:-http://watchman:8084}"
   ADMIN_PASSWORD: "${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env - run npm run setup}"
   SEED_DEMO_DATA: "${SEED_DEMO_DATA:-true}"

@@ -78,7 +78,7 @@ function StartPage() {
     setBusy(true);
     setErr(null);
     try {
-      const r = await p.post<{ ref: string; emailMasked: string }>(`/public/applications${tenantQuery()}`, {
+      const r = await p.post<{ ref: string; emailMasked: string; emailSent: boolean }>(`/public/applications${tenantQuery()}`, {
         entityType: type, answers, businessName: form.businessName, contact: { name: form.name, email: form.email, mobile: form.mobile }, locale: lang, consent: form.consent,
       });
       nav(withQ('/apply/sent'), { state: r });
@@ -205,12 +205,12 @@ function SentPage() {
   const { t } = usePT();
   const loc = useLocation();
   const req = usePublicTenant();
-  const st = loc.state as { ref: string; emailMasked: string } | null;
+  const st = loc.state as { ref: string; emailMasked: string; emailSent?: boolean } | null;
   return (
     <Shell tenant={req.data?.tenant}>
       <section className="pt-card pt-narrow">
-        <h1>{t.sentTitle}</h1>
-        <p className="pt-lede">{t.sentBody(st?.emailMasked ?? '')}</p>
+        <h1>{st?.emailSent === false ? t.continueHere : t.sentTitle}</h1>
+        <p className="pt-lede">{st?.emailSent === false ? t.sentFailed : t.sentBody(st?.emailMasked ?? '')}</p>
         {st?.ref && <p className="pt-help">{t.ref}: <b dir="ltr">{st.ref}</b></p>}
         <Link className="pt-btn" to={withQ('/apply/app')}>{t.continueHere}</Link>
       </section>

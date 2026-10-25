@@ -170,6 +170,22 @@ describe('merchant portal: start, magic link, upload, submit', () => {
   });
 });
 
+describe('email failures', () => {
+  it('keeps the application and the session when the email cannot be sent; ops get a clear error', async () => {
+    const t = await makeTestApp();
+    t.ctx.mailer.send = async () => { throw new Error('connect ECONNREFUSED 127.0.0.1:1025'); };
+    const { a, res } = await start(t);
+    expect(res.status).toBe(201);
+    expect(res.body.emailSent).toBe(false);
+    await a.get('/api/v1/portal/application').expect(200);
+    await request(t.app).post('/api/v1/public/applications/resume').set(CSRF).set('host', 'botim.localhost').send({ email: 'aisha@example.test' }).expect(202);
+    const uw = await t.login('uw@t.local');
+    const c = await uw.post('/api/v1/cases').set(CSRF).send({ acquirerCode: 'EXAMPLE_ACQUIRER_A', entityType: 'llc' }).expect(201);
+    const r = await uw.post(`/api/v1/cases/${c.body.id}/portal-link`).set(CSRF).send({ email: 'm@example.test' }).expect(502);
+    expect(r.body.error).toMatch(/could not be sent/);
+  });
+});
+
 describe('ops can send an upload link for an existing case', () => {
   it('emails the merchant, and the merchant can upload into the ops-created case', async () => {
     const t = await makeTestApp();
