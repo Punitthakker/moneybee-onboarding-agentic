@@ -3,31 +3,37 @@ import { DEFAULT_TENANT_ID } from '@moneybee/shared';
 import type { AuditRec, CaseListFilter, CaseRec, PolicySetRec, SettingsRec, Store, TenantRec, TraceRec, UserRec, WebhookDeliveryRec } from './types';
 import { ConflictError } from './types';
 
+/**
+ * Records are stored through the native driver collection, not through Mongoose documents.
+ * Mongoose casting would drop empty objects (minimize) and treat dotted keys such as
+ * "company.legalName" as nested paths, which silently loses extracted fields.
+ * Every key that contains a dot or starts with "$" is encoded on write and decoded on read,
+ * at any depth (case fields, per-document fields, findings and so on).
+ */
 const loose = (name: string, indexes: Record<string, 1 | -1>[] = []) => {
-  const s = new Schema({ _id: String }, { strict: false, versionKey: false });
+  const s = new Schema({ _id: String }, { strict: false, versionKey: false, minimize: false });
   for (const i of indexes) s.index(i);
   return mongoose.models[name] ?? mongoose.model(name, s, name);
 };
 
-const enc = (k: string) => k.replace(/\./g, '%2E');
-const dec = (k: string) => k.replace(/%2E/g, '.');
-const mapKeys = (o: Record<string, unknown> | undefined, f: (k: string) => string) =>
-  o ? Object.fromEntries(Object.entries(o).map(([k, v]) => [f(k), v])) : o;
-
-// Canonical field paths contain dots ("company.legalName"); encode them for storage.
-const toDoc = <T extends { id: string }>(o: T) => {
-  const { id, ...restAny } = o as T & Record<string, unknown>;
-  const rest = restAny as Record<string, unknown>;
-  if ('fields' in rest && rest.fields && typeof rest.fields === 'object' && 'needsReviewFields' in rest) {
-    rest.fields = mapKeys(rest.fields as Record<string, unknown>, enc);
-  }
-  return { _id: id, ...rest };
+const encKey = (k: string) => k.replace(/\./g, '%2E').replace(/^\$/, '%24');
+const decKey = (k: string) => k.replace(/%2E/g, '.').replace(/^%24/, '$');
+const isPlain = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === 'object' && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
+const deepKeys = (v: unknown, f: (k: string) => string): unknown => {
+  if (Array.isArray(v)) return v.map((x) => deepKeys(x, f));
+  if (isPlain(v)) return Object.fromEntries(Object.entries(v).filter(([, x]) => x !== undefined).map(([k, x]) => [f(k), deepKeys(x, f)]));
+  return v;
 };
-const fromDoc = <T>(d: Record<string, unknown> | null): T | null => {
+
+export const toDoc = <T extends { id: string }>(o: T): Record<string, unknown> & { _id: string } => {
+  const { id, ...rest } = o as T & Record<string, unknown>;
+  return { _id: id, ...(deepKeys(rest, encKey) as Record<string, unknown>) };
+};
+export const fromDoc = <T>(d: Record<string, unknown> | null): T | null => {
   if (!d) return null;
   const { _id, ...rest } = d;
-  if ('needsReviewFields' in rest && rest.fields) rest.fields = mapKeys(rest.fields as Record<string, unknown>, dec);
-  return { id: _id, ...rest } as T;
+  return { id: _id, ...(deepKeys(rest, decKey) as Record<string, unknown>) } as T;
 };
 
 export async function createMongoStore(url: string): Promise<Store> {
@@ -49,7 +55,7 @@ export async function createMongoStore(url: string): Promise<Store> {
   return {
     cases: {
       async create(c) {
-        await Cases.create(toDoc(c));
+        await Cases.collection.insertOne(toDoc(c) as never);
         return c;
       },
       async get(id) {
@@ -76,7 +82,7 @@ export async function createMongoStore(url: string): Promise<Store> {
           await mutator(draft);
           draft.version = cur.version + 1;
           draft.updatedAt = new Date().toISOString();
-          const res = await Cases.replaceOne({ _id: id, version: cur.version }, toDoc(draft));
+          const res = await Cases.collection.replaceOne({ _id: id, version: cur.version } as never, toDoc(draft));
           if (res.matchedCount === 1) return draft;
           await new Promise((r) => setTimeout(r, 20 * (attempt + 1)));
         }
@@ -88,7 +94,7 @@ export async function createMongoStore(url: string): Promise<Store> {
     },
     traces: {
       async add(t) {
-        await Traces.create(toDoc(t));
+        await Traces.collection.insertOne(toDoc(t) as never);
       },
       async listByCase(caseId) {
         const rows = await lean<Record<string, unknown>[]>(Traces.find({ caseId }).sort({ startedAt: 1 }).lean());
@@ -97,7 +103,7 @@ export async function createMongoStore(url: string): Promise<Store> {
     },
     audit: {
       async add(a) {
-        await Audit.create(toDoc(a));
+        await Audit.collection.insertOne(toDoc(a) as never);
       },
       async list(f = {}) {
         const q: Record<string, unknown> = {};
@@ -115,12 +121,12 @@ export async function createMongoStore(url: string): Promise<Store> {
         return fromDoc<UserRec>(await lean(Users.findById(id).lean()));
       },
       async create(u) {
-        await Users.create(toDoc(u));
+        await Users.collection.insertOne(toDoc(u) as never);
         return u;
       },
       async update(id, patch) {
-        const { id: _i, ...rest } = patch as Record<string, unknown>;
-        return fromDoc<UserRec>(await lean(Users.findByIdAndUpdate(id, { $set: rest }, { new: true }).lean()));
+        const { _id: _i, ...rest } = toDoc({ ...(patch as Record<string, unknown>), id: id });
+        return fromDoc<UserRec>(await lean(Users.collection.findOneAndUpdate({ _id: id } as never, { $set: rest }, { returnDocument: 'after' })));
       },
       async list(f = {}) {
         const rows = await lean<Record<string, unknown>[]>(Users.find(f.tenantId ? { tenantId: f.tenantId } : {}).lean());
@@ -136,27 +142,27 @@ export async function createMongoStore(url: string): Promise<Store> {
         return rows.map((r) => fromDoc<TenantRec>(r)!);
       },
       async put(t) {
-        await Tenants.replaceOne({ _id: t.id }, toDoc(t), { upsert: true });
+        await Tenants.collection.replaceOne({ _id: t.id } as never, toDoc(t), { upsert: true });
       },
     },
     policies: {
       async active() {
         const r = await lean<Record<string, unknown> | null>(Policies.findOne().sort({ version: -1 }).lean());
         if (!r) return null;
-        const { _id, ...rest } = r;
+        const { id: _id, ...rest } = fromDoc<Record<string, unknown>>(r)!;
         return rest as unknown as PolicySetRec;
       },
       async save(p) {
-        await Policies.create({ _id: `v${p.version}`, ...p });
+        await Policies.collection.insertOne(toDoc({ ...p, id: `v${p.version}` }) as never);
       },
       async versions() {
         const rows = await lean<Record<string, unknown>[]>(Policies.find({}, { base: 0, acquirers: 0 }).sort({ version: -1 }).lean());
-        return rows.map(({ _id, ...rest }) => rest as unknown as Omit<PolicySetRec, 'base' | 'acquirers'>);
+        return rows.map((r) => { const { id: _id, ...rest } = fromDoc<Record<string, unknown>>(r)!; return rest as unknown as Omit<PolicySetRec, 'base' | 'acquirers'>; });
       },
       async get(version) {
         const r = await lean<Record<string, unknown> | null>(Policies.findById(`v${version}`).lean());
         if (!r) return null;
-        const { _id, ...rest } = r;
+        const { id: _id, ...rest } = fromDoc<Record<string, unknown>>(r)!;
         return rest as unknown as PolicySetRec;
       },
     },
@@ -164,19 +170,20 @@ export async function createMongoStore(url: string): Promise<Store> {
       async get() {
         const r = await lean<Record<string, unknown> | null>(Settings.findById('main').lean());
         if (!r) return {};
-        const { _id, ...rest } = r;
+        const { id: _id, ...rest } = fromDoc<Record<string, unknown>>(r)!;
         return rest as SettingsRec;
       },
       async set(s) {
-        await Settings.replaceOne({ _id: 'main' }, { _id: 'main', ...s }, { upsert: true });
+        await Settings.collection.replaceOne({ _id: 'main' } as never, toDoc({ ...s, id: 'main' }), { upsert: true });
       },
     },
     webhooks: {
       async create(d) {
-        await Hooks.create(toDoc(d));
+        await Hooks.collection.insertOne(toDoc(d) as never);
       },
       async update(id, patch) {
-        await Hooks.updateOne({ _id: id }, { $set: { ...patch, updatedAt: new Date().toISOString() } });
+        const { _id: _h, ...set } = toDoc({ ...(patch as Record<string, unknown>), updatedAt: new Date().toISOString(), id });
+        await Hooks.collection.updateOne({ _id: id } as never, { $set: set });
       },
       async get(id) {
         return fromDoc<WebhookDeliveryRec>(await lean(Hooks.findById(id).lean()));
