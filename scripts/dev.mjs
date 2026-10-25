@@ -3,8 +3,8 @@ import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
 if (!existsSync('.env')) spawnSync(process.execPath, ['scripts/setup.mjs'], { stdio: 'inherit' });
-console.log('Starting mongo, redis, minio in Docker...');
-const up = spawnSync('docker', ['compose', 'up', '-d', '--wait', 'mongo', 'redis', 'minio'], { stdio: 'inherit' });
+console.log('Starting mongo and redis in Docker...');
+const up = spawnSync('docker', ['compose', 'up', '-d', '--wait', 'mongo', 'redis'], { stdio: 'inherit' });
 if (up.status !== 0) {
   console.error('docker compose failed. Is Docker running?');
   process.exit(1);

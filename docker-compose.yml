@@ -1,6 +1,6 @@
 # MoneyBee Onboard - local stack
 #   docker compose up -d --build        full system on http://localhost:8080
-#   docker compose up -d mongo redis minio          infra only (then: npm run dev)
+#   docker compose up -d mongo redis                infra only (then: npm run dev)
 #   docker compose --profile mssql up -d --build    optional: keep SQL Server as the system of record (set REPO=mssql)
 name: moneybee-onboard
 
@@ -12,7 +12,10 @@ x-api-env: &api-env
   STORE: mongo
   REPO: "${REPO:-mongo}"
   QUEUE_MODE: bullmq
-  STORAGE: s3
+  # Documents are AES-256-GCM encrypted before they are written. Default: encrypted files on the files-data volume.
+  # For S3-compatible storage (a UAE-region bucket, or MinIO with --profile s3) set DOCKER_STORAGE=s3 and the S3_* values.
+  STORAGE: "${DOCKER_STORAGE:-local}"
+  LOCAL_STORAGE_DIR: /app/.data/files
   MONGO_URL: mongodb://mongo:27017/moneybee_onboard
   MSSQL_URL: "Server=mssql,1433;Database=moneybee_onboard;User Id=sa;Password=${MSSQL_SA_PASSWORD:-MoneyBee_Dev_123!};Encrypt=false;TrustServerCertificate=true"
   REDIS_URL: redis://redis:6379
@@ -83,8 +86,10 @@ services:
       timeout: 3s
       retries: 10
 
+  # Optional: MinIO no longer publishes public Docker images; use your own S3-compatible bucket, or a MinIO image you have access to.
   minio:
-    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    image: "${MINIO_IMAGE:-minio/minio:RELEASE.2024-12-18T13-15-44Z}"
+    profiles: [s3]
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -131,8 +136,8 @@ services:
     depends_on:
       mongo: { condition: service_healthy }
       redis: { condition: service_healthy }
-      minio: { condition: service_healthy }
     ports: ["127.0.0.1:4000:4000"]
+    volumes: [files-data:/app/.data]
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
@@ -158,5 +163,6 @@ services:
 
 volumes:
   mongo-data:
+  files-data:
   mssql-data:
   minio-data:

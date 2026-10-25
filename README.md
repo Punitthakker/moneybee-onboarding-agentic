@@ -21,7 +21,6 @@ Open **http://localhost:8080** and sign in with the admin or demo login printed 
 |---|---|
 | App | http://localhost:8080 |
 | API | http://localhost:4000 (`/health`, `/ready`) |
-| MinIO console | http://localhost:9001 |
 | MongoDB | localhost:27017 (database `moneybee_onboard`; completed onboardings in `onboarding_records`) |
 | Webhook sink logs | `docker compose logs -f webhook-sink` |
 | Mail catcher (Mailpit) | http://localhost:8025 |
