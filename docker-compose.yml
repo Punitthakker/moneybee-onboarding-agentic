@@ -150,7 +150,8 @@ services:
     restart: unless-stopped
     depends_on:
       api: { condition: service_healthy }
-    ports: ["127.0.0.1:8080:80"]
+    # WEB_PORT in .env if 8080 is taken on your machine (the start script picks a free port for you)
+    ports: ["127.0.0.1:${WEB_PORT:-8080}:80"]
 
   # Demo receiver for the onboarding webhook: verifies the HMAC signature and logs the event (token redacted).
   webhook-sink:
