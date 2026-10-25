@@ -425,9 +425,9 @@ function OutputPanel({ c, webhooks, onChanged }: { c: Case; webhooks: CaseRespon
         <p className="eyebrow">Completion</p>
         {c.status === 'COMPLETED' && c.completion ? (
           <div className="stack" style={{ gap: 8 }}>
-            <div className="row"><span className="pill ok">SQL Server written</span><span className="mono small">{new Date(c.completion.sqlWrittenAt).toLocaleString()}</span></div>
+            <div className="row"><span className="pill ok">System of record written</span><span className="mono small">{new Date(c.completion.sqlWrittenAt).toLocaleString()}</span></div>
             <div className="small">Merchant <span className="mono">{c.completion.merchantId}</span></div>
-            <div className="small">SQL case <span className="mono">{c.completion.sqlCaseId}</span></div>
+            <div className="small">Record <span className="mono">{c.completion.sqlCaseId}</span></div>
             <div className="small">Token id <span className="mono">{c.completion.tokenId}</span> · expires <span className="mono">{new Date(c.completion.tokenExpiresAt).toLocaleString()}</span></div>
             {minted ? (
               <>
@@ -440,7 +440,7 @@ function OutputPanel({ c, webhooks, onChanged }: { c: Case; webhooks: CaseRespon
           </div>
         ) : c.status === 'APPROVED' ? (
           <div className="stack">
-            <p className="muted" style={{ margin: 0 }}>Approved by a human reviewer. Completing writes the merchant, parties, documents, decision and a hashed token to SQL Server in one transaction, then fires the signed webhook.</p>
+            <p className="muted" style={{ margin: 0 }}>Approved by a human reviewer. Completing writes the merchant, parties, documents, decision and a hashed token to the system of record in one atomic write, then fires the signed webhook.</p>
             {can.write(me) && <div><button className="btn btn-honey" disabled={busy} onClick={complete}>{busy ? 'Completing' : 'Complete and mint token'}</button></div>}
           </div>
         ) : <p className="muted" style={{ margin: 0 }}>Available once the case is approved.</p>}

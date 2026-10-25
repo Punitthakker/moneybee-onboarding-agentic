@@ -2,11 +2,13 @@ import path from 'node:path';
 import type { Config } from '../config';
 import type { Logger } from '../logger';
 import { createMemoryRepository } from './memory-repository';
+import { createMongoRepository, mongoRecordCollections } from './mongo-repository';
 import { createMssqlRepository } from './mssql-repository';
 import type { OnboardingRepository } from './repository';
 
 export function createRepository(cfg: Config, log: Logger, root = process.cwd()): OnboardingRepository {
   if (cfg.REPO === 'memory') return createMemoryRepository();
+  if (cfg.REPO === 'mongo') return createMongoRepository(mongoRecordCollections(cfg.MONGO_URL), log);
   const dir = process.env.MIGRATIONS_DIR ?? findMigrations(root);
   return createMssqlRepository(cfg.MSSQL_URL, dir, log);
 }

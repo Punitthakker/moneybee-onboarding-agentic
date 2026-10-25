@@ -1,18 +1,18 @@
 # MoneyBee Onboard
 
-Agentic merchant onboarding for UAE acquirers. Drop a merchant's documents in; agents classify, extract, cross-check, resolve beneficial owners, screen, score and build the acquirer pack. A human underwriter reviews and approves. On completion the record is written to SQL Server in one transaction, a secure single-use onboarding token is minted, and a signed webhook carries the token to your payment / onboarding notification flow.
+Agentic merchant onboarding for UAE acquirers. Drop a merchant's documents in; agents classify, extract, cross-check, resolve beneficial owners, screen, score and build the acquirer pack. A human underwriter reviews and approves. On completion the record is written to MongoDB (the system of record) in one atomic write, a secure single-use onboarding token is minted, and a signed webhook carries the token to your payment / onboarding notification flow.
 
 > The agents recommend and prepare. They never approve or decline. Screening is a **MOCK** until a real provider is plugged in (see `docs/MOCKS.md`).
 
 ## Run it on Docker (recommended)
 
-Requirements: Docker Desktop (with Rosetta enabled on Apple Silicon for SQL Server), Node 20+ (only for the setup script), about 6 GB free RAM for Docker.
+Requirements: Docker Desktop, Node 20+ (only for the setup script), about 4 GB free RAM for Docker. SQL Server is no longer needed (see below).
 
 ```bash
 git clone https://github.com/Punitthakker/moneybee-onboarding-agentic.git
 cd moneybee-onboarding-agentic
 node scripts/setup.mjs            # creates .env with fresh secrets and prints the logins
-docker compose up -d --build      # first build takes a few minutes; SQL Server needs ~60s to start
+docker compose up -d --build      # first build takes a few minutes
 ```
 
 Open **http://localhost:8080** and sign in with the admin or demo login printed by the setup script.
@@ -22,7 +22,7 @@ Open **http://localhost:8080** and sign in with the admin or demo login printed 
 | App | http://localhost:8080 |
 | API | http://localhost:4000 (`/health`, `/ready`) |
 | MinIO console | http://localhost:9001 |
-| SQL Server | localhost:1433 (user `sa`, password `MSSQL_SA_PASSWORD` from `.env`) |
+| MongoDB | localhost:27017 (database `moneybee_onboard`; completed onboardings in `onboarding_records`) |
 | Webhook sink logs | `docker compose logs -f webhook-sink` |
 | Mail catcher (Mailpit) | http://localhost:8025 |
 | Sanctions screening (Watchman, internal) | http://localhost:8084 |
@@ -49,6 +49,12 @@ npm run eval       # pipeline accuracy on the fixtures; fails below the floors
 npm run e2e        # Playwright happy path (needs the stack running)
 npm run typecheck
 ```
+
+## System of record: MongoDB (SQL Server optional)
+
+Completed onboardings are stored in MongoDB (`onboarding_records`), one document per completion holding the merchant snapshot, parties, documents, decision, screening, hashed token and audit trail. A single-document write is atomic in MongoDB, so a completion is fully stored or not at all, without a replica set. Token claims are one atomic update, so a token redeems at most once. The same contract tests run against every engine (`apps/api/test/repository.contract.test.ts`; set `MONGO_TEST_URL` to also run them on a real MongoDB).
+
+To keep SQL Server instead: `REPO=mssql docker compose --profile mssql up -d --build`.
 
 ## White-label tenants (MoneyBee and Botim)
 
@@ -88,7 +94,7 @@ POST   /cases/:id/run                      start or resume the agent pipeline
 GET    /cases/:id                          full case state, fields, confidence, traces
 PATCH  /cases/:id/fields                   reviewer edit or confirm {path, value | confirm, reason}
 POST   /cases/:id/review                   {decision: approve|reject|request_info, notes}
-POST   /cases/:id/complete                 finalise, write to SQL Server, mint token
+POST   /cases/:id/complete                 finalise, write the system of record, mint token
 GET    /onboarding/:token/status           read-only status by token
 POST   /onboarding/:token/claim            single use: returns the onboarding package
 POST   /tokens/:id/revoke                  revoke a token
@@ -104,6 +110,6 @@ The onboarding package JSON Schema is in `packages/shared/onboarding-package.sch
 `scripts/webhook-sink.mjs` is a working receiver to copy from.
 
 ## Layout
-`apps/web` React UI · `apps/api` API and agents · `packages/shared` schemas · `db/migrations` SQL Server DDL · `policies` base policy and example acquirer overrides · `fixtures` synthetic merchants · `docs` plan, decisions, mocks, security, threat model.
+`apps/web` React UI · `apps/api` API and agents · `packages/shared` schemas · `db/migrations` SQL Server DDL (optional engine) · `policies` base policy and example acquirer overrides · `fixtures` synthetic merchants · `docs` plan, decisions, mocks, security, threat model.
 
 All fixture data is synthetic. Policy values and example acquirers are illustrative and must be set by compliance.

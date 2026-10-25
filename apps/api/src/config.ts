@@ -20,7 +20,8 @@ const EnvSchema = z.object({
   LLM_MODE: z.enum(['auto', 'live', 'mock']).default('auto'),
 
   STORE: z.enum(['mongo', 'memory']).default('mongo'),
-  REPO: z.enum(['mssql', 'memory']).default('mssql'),
+  /** system of record for completed onboardings: mongo (default), mssql (optional, docker profile mssql) or memory (tests) */
+  REPO: z.enum(['mongo', 'mssql', 'memory']).default('mongo'),
   QUEUE_MODE: z.enum(['bullmq', 'inline']).default('bullmq'),
 
   MONGO_URL: z.string().default('mongodb://localhost:27017/moneybee_onboard'),

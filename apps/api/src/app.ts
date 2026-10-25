@@ -39,9 +39,9 @@ export function createApp(ctx: Ctx, queue: JobQueue): Express {
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
   app.get('/ready', async (_req, res) => {
-    const sqlOk = await ctx.repo.ping();
-    const ok = sqlOk;
-    res.status(ok ? 200 : 503).json({ ok, sql: sqlOk, llm: ctx.llm.isMock ? 'mock' : 'live' });
+    const recordOk = await ctx.repo.ping();
+    const ok = recordOk;
+    res.status(ok ? 200 : 503).json({ ok, systemOfRecord: { engine: ctx.cfg.REPO, ok: recordOk }, llm: ctx.llm.isMock ? 'mock' : 'live' });
   });
 
   const v1 = express.Router();
