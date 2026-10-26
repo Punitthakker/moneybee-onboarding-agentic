@@ -154,8 +154,20 @@ services:
     restart: unless-stopped
     depends_on:
       api: { condition: service_healthy }
-    # WEB_PORT in .env if 8080 is taken on your machine (the start script picks a free port for you)
-    ports: ["127.0.0.1:${WEB_PORT:-8080}:80"]
+    # WEB_PORT in .env if 8080 is taken on your machine (the start script picks a free port for you).
+    # WEB_BIND=0.0.0.0 publishes the app on a server's public address (scripts/server-deploy.sh sets it).
+    ports: ["${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:80"]
+
+  # HTTPS on a server: Caddy gets a Let's Encrypt certificate for PUBLIC_HOST and forwards to the web container.
+  # Needs ports 80 and 443 open to the internet. Enable with: docker compose --profile https up -d
+  caddy:
+    image: caddy:2.8.4-alpine
+    profiles: [https]
+    restart: unless-stopped
+    depends_on: [web]
+    command: ["caddy", "reverse-proxy", "--from", "${PUBLIC_HOST:-localhost}", "--to", "web:80"]
+    ports: ["80:80", "443:443"]
+    volumes: [caddy-data:/data, caddy-config:/config]
 
   # Demo receiver for the onboarding webhook: verifies the HMAC signature and logs the event (token redacted).
   webhook-sink:
@@ -171,3 +183,5 @@ volumes:
   files-data:
   mssql-data:
   minio-data:
+  caddy-data:
+  caddy-config:

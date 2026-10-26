@@ -39,6 +39,18 @@ curl -s http://localhost:8080/api/v1/onboarding/<token>/status
 curl -s -X POST http://localhost:8080/api/v1/onboarding/<token>/claim   # works once
 ```
 
+## Deploy on a server (single Linux host)
+
+For a demo or pilot on one machine (for example an AWS EC2 Ubuntu instance with Docker):
+
+```bash
+git clone https://github.com/Punitthakker/moneybee-onboarding-agentic.git && cd moneybee-onboarding-agentic   # or copy a release tarball
+scripts/server-deploy.sh http://<server-ip>                 # plain HTTP on port 80
+scripts/server-deploy.sh https://<ip-with-dashes>.sslip.io  # HTTPS with an automatic certificate (ports 80 and 443 open)
+```
+
+The script installs the Docker Compose plugin for the user if it is missing, creates `.env` with fresh secrets on the first run (logins in `LOGINS-SERVER.txt`, owner-only), writes the public address into `.env`, builds and starts the stack, and waits until it answers. Re-running it updates the app and keeps the data. The user must be allowed to use Docker (`sudo usermod -aG docker <user>` once). Only the web port (or 80 and 443 with HTTPS) is published; MongoDB, Redis, the API, Mailpit and Watchman stay on the server's loopback interface. Read the demo mailbox through an SSH tunnel: `ssh -L 8025:127.0.0.1:8025 <user>@<server>` then http://localhost:8025.
+
 ## Develop
 ```bash
 npm install
