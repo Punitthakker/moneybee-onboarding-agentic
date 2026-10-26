@@ -51,6 +51,8 @@ scripts/server-deploy.sh https://<ip-with-dashes>.sslip.io  # HTTPS with an auto
 
 The script installs the Docker Compose plugin for the user if it is missing, creates `.env` with fresh secrets on the first run (logins in `LOGINS-SERVER.txt`, owner-only), writes the public address into `.env`, builds and starts the stack, and waits until it answers. Re-running it updates the app and keeps the data. The user must be allowed to use Docker (`sudo usermod -aG docker <user>` once). Only the web port (or 80 and 443 with HTTPS) is published; MongoDB, Redis, the API, Mailpit and Watchman stay on the server's loopback interface. Read the demo mailbox through an SSH tunnel: `ssh -L 8025:127.0.0.1:8025 <user>@<server>` then http://localhost:8025.
 
+**No Docker access on the server?** `scripts/server-native.sh install http://<server-ip>:8080` runs the same app without Docker and without root: Node.js runs the API and serves the web app (`WEB_DIST`), and MongoDB and Mailpit run as the same user from downloaded binaries (data in `~/.local/share/moneybee`). It adds a start-on-reboot crontab entry; `scripts/server-native.sh status|restart|logs|stop` manage it. Queue mode is inline (no Redis) and sanctions screening stays on the mock provider. When Docker becomes available, `scripts/server-deploy.sh` stops the no-Docker setup and takes over.
+
 ## Develop
 ```bash
 npm install

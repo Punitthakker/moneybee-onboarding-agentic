@@ -57,7 +57,8 @@ PROFILE=()
 } >> .env
 [ "$SCHEME" = "https" ] && PROFILE=(--profile https)
 
-# 5. Build and start
+# 5. Build and start (stop the no-Docker setup first if it was used on this server)
+[ -x scripts/server-native.sh ] && scripts/server-native.sh stop >/dev/null 2>&1 || true
 docker compose "${PROFILE[@]}" up -d --build
 
 # 6. Wait for the app

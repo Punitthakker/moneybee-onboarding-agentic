@@ -9,6 +9,8 @@ const bool = (d: boolean) =>
 const EnvSchema = z.object({
   NODE_ENV: z.string().default('development'),
   PORT: z.coerce.number().default(4000),
+  /** serve the built web app (apps/web/dist) from the API itself, for servers without Docker and nginx */
+  WEB_DIST: z.string().optional(),
   PUBLIC_API_URL: z.string().default('http://localhost:4000'),
   CORS_ORIGINS: z.string().default('http://localhost:5173'),
   LOG_LEVEL: z.string().default('info'),
