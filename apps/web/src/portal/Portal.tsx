@@ -31,7 +31,7 @@ function usePublicTenant() {
 }
 
 function Shell({ tenant, children, right }: { tenant?: PublicTenant | null; children: ReactNode; right?: ReactNode }) {
-  const { lang, t } = usePT();
+  const { lang, t, L } = usePT();
   useTenantTheme(tenant);
   return (
     <div className="pt-shell">
@@ -45,12 +45,12 @@ function Shell({ tenant, children, right }: { tenant?: PublicTenant | null; chil
       <footer className="pt-foot">
         {tenant && (
           <p>
-            {tenant.copy.supportLine || t.help}{' '}
+            {L(tenant.copy.supportLine, tenant.copy.supportLineAr) || t.help}{' '}
             <a href={`mailto:${tenant.contact.supportEmail}`}>{tenant.contact.supportEmail}</a>
             {tenant.contact.whatsappNumber && <> &nbsp; WhatsApp <a href={`https://wa.me/${tenant.contact.whatsappNumber.replace(/\D/g, '')}`}>{tenant.contact.whatsappNumber}</a></>}
           </p>
         )}
-        {tenant?.copy.legalFooter && <p className="pt-legal">{tenant.copy.legalFooter}</p>}
+        {tenant?.copy.legalFooter && <p className="pt-legal">{L(tenant.copy.legalFooter, tenant.copy.legalFooterAr)}</p>}
         <PoweredByMoneyBee locale={lang} />
       </footer>
     </div>
@@ -98,8 +98,8 @@ function StartPage() {
         </div>
       )}
       <section className="pt-hero">
-        <h1>{tenant?.copy.welcomeTitle}</h1>
-        <p className="pt-lede">{tenant?.copy.welcomeBody}</p>
+        <h1>{L(tenant?.copy.welcomeTitle, tenant?.copy.welcomeTitleAr)}</h1>
+        <p className="pt-lede">{L(tenant?.copy.welcomeBody, tenant?.copy.welcomeBodyAr)}</p>
         <Link to={withQ('/apply/resume')} className="pt-textlink">{t.resumeLink}</Link>
       </section>
 

@@ -42,7 +42,11 @@
     "welcomeTitle": "Start accepting payments with Botim.",
     "welcomeBody": "Send your business documents from here, WhatsApp or email. We check them as they arrive and tell you exactly what is left.",
     "supportLine": "Need help? Type HELP on WhatsApp or contact the onboarding team.",
-    "legalFooter": "Placeholder legal text. Replace with the text approved by Botim."
+    "legalFooter": "Placeholder legal text. Replace with the text approved by Botim.",
+    "welcomeTitleAr": "ابدأ قبول المدفوعات مع بوتيم.",
+    "welcomeBodyAr": "أرسل مستندات نشاطك التجاري من هنا أو عبر واتساب أو البريد الإلكتروني. نتحقق منها فور وصولها ونخبرك بدقة بما تبقى.",
+    "supportLineAr": "تحتاج مساعدة؟ اكتب HELP على واتساب أو تواصل مع فريق التسجيل.",
+    "legalFooterAr": "نص قانوني مؤقت، يُستبدل بالنص المعتمد من بوتيم."
   },
   "contact": {
     "supportEmail": "onboarding@botim.example",

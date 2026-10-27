@@ -43,7 +43,10 @@
     "welcomeTitle": "Get your business ready to accept payments.",
     "welcomeBody": "Send your documents from here, WhatsApp or email. We read them, tell you what is still missing and keep everything in one place.",
     "supportLine": "Questions? Our onboarding team is here to help.",
-    "legalFooter": ""
+    "legalFooter": "",
+    "welcomeTitleAr": "جهّز نشاطك التجاري لقبول المدفوعات.",
+    "welcomeBodyAr": "أرسل مستنداتك من هنا أو عبر واتساب أو البريد الإلكتروني. نقرؤها ونخبرك بما ينقص ونحفظ كل شيء في مكان واحد.",
+    "supportLineAr": "لديك أسئلة؟ فريق التسجيل جاهز لمساعدتك."
   },
   "contact": {
     "supportEmail": "onboarding@moneybee.world"

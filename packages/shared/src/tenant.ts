@@ -56,6 +56,11 @@ export const TenantCopySchema = z
     welcomeBody: z.string().min(1).max(600),
     supportLine: z.string().min(1).max(200),
     legalFooter: z.string().max(400).default(''),
+    // Arabic versions (shown when the page is in Arabic; English is used when one is missing)
+    welcomeTitleAr: z.string().min(1).max(160).optional(),
+    welcomeBodyAr: z.string().min(1).max(600).optional(),
+    supportLineAr: z.string().min(1).max(200).optional(),
+    legalFooterAr: z.string().max(400).optional(),
     privacyUrl: z.string().url().optional(),
     termsUrl: z.string().url().optional(),
   })

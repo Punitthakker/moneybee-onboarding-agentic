@@ -116,4 +116,19 @@ describe('add-only upgrades of stored config', () => {
     await svc2.init();
     expect(svc2.get('botim')!.enabledEntityTypes).toEqual(['llc', 'free_zone']);
   });
+
+  it('fills Arabic texts into stored tenants once and never overwrites an edited text', async () => {
+    const store = createMemoryStore();
+    const svc0 = new TenantService(store);
+    await svc0.init();
+    const bt = (await store.tenants.get('botim'))!;
+    const { welcomeTitleAr: _a, welcomeBodyAr: _b, supportLineAr: _c, legalFooterAr: _d, ...oldCopy } = bt.copy;
+    await store.tenants.put({ ...bt, copy: { ...oldCopy, welcomeTitle: 'Edited by Botim' } });
+    const svc = new TenantService(store);
+    await svc.init();
+    const copy = svc.get('botim')!.copy;
+    expect(copy.welcomeTitle).toBe('Edited by Botim');
+    expect(copy.welcomeTitleAr).toMatch(/بوتيم/);
+    expect(copy.supportLineAr).toBeTruthy();
+  });
 });

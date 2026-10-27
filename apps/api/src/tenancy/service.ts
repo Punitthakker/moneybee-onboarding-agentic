@@ -48,8 +48,14 @@ export class TenantService {
         // company types added to the tenant file later (for example branch) are switched on once; an admin who removes one keeps it removed
         const seeded = existing.seededEntityTypes ?? t.enabledEntityTypes.filter((x) => LAUNCH_ENTITY_TYPES.includes(x));
         const added = t.enabledEntityTypes.filter((x) => !seeded.includes(x) && !existing.enabledEntityTypes.includes(x));
-        if (added.length || !existing.seededEntityTypes) {
-          await this.store.tenants.put({ ...existing, enabledEntityTypes: [...existing.enabledEntityTypes, ...added], seededEntityTypes: Array.from(new Set([...seeded, ...t.enabledEntityTypes])), updatedAt: now.toISOString(), updatedBy: added.length ? 'seed:entity-types' : existing.updatedBy });
+        // copy fields added to the tenant file later (for example the Arabic texts) are filled in once; stored values are never overwritten
+        const copyAdded = Object.fromEntries(Object.entries(t.copy).filter(([k, v]) => v !== undefined && (existing.copy as Record<string, unknown>)[k] === undefined));
+        const hasCopy = Object.keys(copyAdded).length > 0;
+        if (added.length || !existing.seededEntityTypes || hasCopy) {
+          await this.store.tenants.put({
+            ...existing, copy: { ...existing.copy, ...copyAdded }, enabledEntityTypes: [...existing.enabledEntityTypes, ...added], seededEntityTypes: Array.from(new Set([...seeded, ...t.enabledEntityTypes])),
+            updatedAt: now.toISOString(), updatedBy: added.length ? 'seed:entity-types' : hasCopy ? 'seed:copy' : existing.updatedBy,
+          });
         }
         continue;
       }
