@@ -8,11 +8,17 @@ import type { StepHandle } from './runtime';
 import { SchemaParseError, type LlmResult } from '../llm/client';
 import { pdfPages } from '../util/pdf';
 
+/** File-name hints, most specific first. Used for images and, in mock mode, for PDFs whose text the fixture parser cannot read. */
 const FILENAME_HINTS: [RegExp, DocType][] = [
-  [/licen[cs]e/i, 'trade_licence'], [/emirates|eid/i, 'emirates_id'], [/passport/i, 'passport'], [/visa/i, 'residence_visa'], [/ejari|lease/i, 'lease_ejari'],
-  [/iban|bank.?letter/i, 'bank_letter'], [/vat|trn/i, 'vat_certificate'], [/moa|aoa|memorandum/i, 'moa_aoa'],
-  [/ubo|beneficial/i, 'ubo_declaration'], [/shareholder/i, 'register_of_shareholders'], [/resolution.*branch|branch.*resolution/i, 'branch_board_resolution'],
+  [/resolution.*branch|branch.*resolution/i, 'branch_board_resolution'], [/incumbency|good.?standing/i, 'incumbency_certificate'], [/chamber/i, 'chamber_certificate'],
+  [/incorporation|\bcoi\b/i, 'certificate_of_incorporation'], [/partner|shareholder/i, 'register_of_shareholders'], [/director/i, 'register_of_directors'],
+  [/share.?cert/i, 'share_certificate'], [/moa|aoa|memorandum|articles/i, 'moa_aoa'], [/ubo|beneficial/i, 'ubo_declaration'],
+  [/signator|\bpoa\b|power.?of.?attorney|board.?resolution/i, 'authorised_signatory_letter'],
+  [/licen[cs]e/i, 'trade_licence'], [/emirates|\beid\b|eid[_ -]/i, 'emirates_id'], [/passport/i, 'passport'], [/visa/i, 'residence_visa'], [/ejari|lease|tenancy/i, 'lease_ejari'],
+  [/iban|bank.?letter|account.?confirmation/i, 'bank_letter'], [/statement/i, 'bank_statement'], [/vat|\btrn\b|tax/i, 'vat_certificate'],
+  [/website|product/i, 'website_description'], [/profile/i, 'company_profile'],
 ];
+export const hintFromFileName = (name: string): DocType | null => FILENAME_HINTS.find(([re]) => re.test(name))?.[1] ?? null;
 
 /** Classifier agent: labels each file (and each segment of a multi-document PDF). */
 export async function classifyFiles(ctx: Ctx, h: StepHandle, c: CaseRec): Promise<DocRec[]> {
@@ -41,6 +47,13 @@ export async function classifyFiles(ctx: Ctx, h: StepHandle, c: CaseRec): Promis
         h.tool('schema_parse_failure', { fileId: f.id }, e.message);
         continue;
       }
+      // mock mode only reads the synthetic fixtures; for a real scan it falls back to the file name, flagged for review
+      const hint = ctx.llm.isMock && r.output.segments.every((s) => s.docType === 'unknown') ? hintFromFileName(f.name) : null;
+      if (hint) {
+        out.push({ id: randomUUID(), fileId: f.id, docType: hint, language: r.output.segments[0]?.language ?? 'unknown', pageStart: 1, pageEnd: f.pageCount ?? 1, classConfidence: 0.5, verifiedStatus: 'UNVERIFIED', needsReview: true });
+        h.tool('mock_filename_classifier', { file: f.name }, `MOCK: text not recognised, classified by file name (${hint})`);
+        continue;
+      }
       for (const s of r.output.segments) {
         const end = Math.min(s.pageEnd, f.pageCount ?? s.pageEnd);
         out.push({ id: randomUUID(), fileId: f.id, docType: s.docType, language: s.language, issuingAuthority: s.issuingAuthority, pageStart: s.pageStart, pageEnd: Math.max(s.pageStart, end), classConfidence: s.confidence, verifiedStatus: 'UNVERIFIED' });
@@ -49,7 +62,7 @@ export async function classifyFiles(ctx: Ctx, h: StepHandle, c: CaseRec): Promis
     } else {
       // image
       if (ctx.llm.isMock) {
-        const hint = FILENAME_HINTS.find(([re]) => re.test(f.name))?.[1] ?? 'unknown';
+        const hint = hintFromFileName(f.name) ?? 'unknown';
         out.push({ id: randomUUID(), fileId: f.id, docType: hint, language: 'unknown', pageStart: 1, pageEnd: 1, classConfidence: hint === 'unknown' ? 0.2 : 0.5, verifiedStatus: 'UNVERIFIED', needsReview: true });
         h.tool('mock_filename_classifier', { file: f.name }, `MOCK: images are classified by file name only (${hint})`);
       } else {

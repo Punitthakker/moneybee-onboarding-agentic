@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
@@ -8,7 +8,7 @@ import {
 } from '@moneybee/shared';
 import { authenticate, requireRole } from '../auth';
 import type { Ctx } from '../context';
-import type { CaseRec } from '../db/types';
+import type { CaseRec, DocRec } from '../db/types';
 import { ingest, type IntakeInput } from '../agents/intake';
 import { classifyFiles } from '../agents/classifier';
 import { step } from '../agents/runtime';
@@ -31,6 +31,10 @@ const StartBody = z.object({
   contact: Contact,
   locale: z.enum(['en', 'ar']).default('en'),
   consent: z.literal(true, { errorMap: () => ({ message: 'please accept the privacy notice' }) }),
+});
+/** A document record placed by the merchant (slot or "what is this?") rather than by the classifier: low confidence, flagged for review. */
+const slotDoc = (fileId: string, docType: DocType, pageCount?: number): DocRec => ({
+  id: randomUUID(), fileId, docType, language: 'unknown', pageStart: 1, pageEnd: Math.max(1, pageCount ?? 1), classConfidence: 0.4, verifiedStatus: 'UNVERIFIED', needsReview: true,
 });
 const PatchBody = z.object({ entityType: EntityTypeSchema.optional(), answers: AnswersSchema.optional(), businessName: z.string().trim().min(2).max(200).optional(), locale: z.enum(['en', 'ar']).optional() }).strict();
 
@@ -192,10 +196,29 @@ export function portalRoutes(ctx: Ctx, queue: JobQueue): Router {
     const inputs: IntakeInput[] = files.map((f) => ({ name: f.originalname, data: f.buffer, originPath: f.originalname }));
     const result = await ingest(ctx, c.id, inputs);
     const at = ctx.now().toISOString();
+    // The same file can satisfy more than one checklist item (one scan holding a passport and an Emirates ID,
+    // a partner list that is also the register of directors). A file sent again into a slot is not stored twice:
+    // the existing file is counted for that slot as well, for a reviewer to confirm.
+    const reused: { name: string; fileId: string }[] = [];
+    if (slot) {
+      for (const f of files) {
+        const hash = createHash('sha256').update(f.buffer).digest('hex');
+        const prev = c.files.find((x) => x.sha256 === hash && !x.duplicateOf);
+        if (prev && !result.added.some((a) => a.id === prev.id)) reused.push({ name: prev.name, fileId: prev.id });
+      }
+    }
     await ctx.store.cases.update(c.id, (x) => {
       x.files.push(...result.added);
       if (result.added.some((f) => f.injectionSuspected)) x.injectionSuspected = true;
       x.portal!.uploads.push(...result.added.map((f) => ({ fileId: f.id, ...(slot ? { slot } : {}), at })));
+      for (const r of reused) {
+        if (!x.documents.some((d) => d.fileId === r.fileId && d.docType === slot)) {
+          const file = x.files.find((y) => y.id === r.fileId);
+          x.documents = x.documents.filter((d) => !(d.fileId === r.fileId && d.docType === 'unknown'));
+          x.documents.push(slotDoc(r.fileId, slot!, file?.pageCount));
+        }
+        x.portal!.uploads.push({ fileId: r.fileId, slot: slot!, at });
+      }
       x.portal!.lastSeenAt = at;
     });
     // classify straight away so the checklist ticks while the merchant is still here (extraction waits for submit)
@@ -216,13 +239,32 @@ export function portalRoutes(ctx: Ctx, queue: JobQueue): Router {
       });
       for (const d of docs) detected[d.fileId] = [...(detected[d.fileId] ?? []), d.docType];
     }
-    await auditM(c, 'portal.documents_added', req, { added: result.added.length, rejected: result.rejected.length, slot });
+    await auditM(c, 'portal.documents_added', req, { added: result.added.length, rejected: result.rejected.length, reused: reused.length, slot });
     res.status(201).json({
       added: result.added.map((f) => ({ id: f.id, name: f.name, detected: detected[f.id] ?? [], matchesSlot: slot ? (detected[f.id] ?? []).includes(slot) : null })),
-      duplicates: result.duplicates,
+      duplicates: slot ? [] : result.duplicates,
+      reused: reused.map((r) => r.name),
       rejected: result.rejected,
       view: await view(c.id),
     });
+  }));
+
+  /** The merchant tells us what a file is when it could not be recognised automatically (a reviewer confirms it later). */
+  r.patch('/portal/application/files/:fileId', writes, csrf, session, wrap(async (req, res) => {
+    const c = pc(req);
+    if (!canUpload(c)) throw new HttpError(409, 'files can no longer be changed while the application is being checked');
+    const { docType } = z.object({ docType: DocTypeSchema }).parse(req.body ?? {});
+    const f = c.files.find((x) => x.id === req.params.fileId && !x.duplicateOf);
+    if (!f) throw new HttpError(404, 'file not found');
+    const at = ctx.now().toISOString();
+    await ctx.store.cases.update(c.id, (x) => {
+      x.documents = x.documents.filter((d) => !(d.fileId === f.id && d.docType === 'unknown'));
+      if (docType !== 'unknown' && !x.documents.some((d) => d.fileId === f.id && d.docType === docType)) x.documents.push(slotDoc(f.id, docType, f.pageCount));
+      x.portal!.uploads.push({ fileId: f.id, slot: docType, at });
+      x.portal!.lastSeenAt = at;
+    });
+    await auditM(c, 'portal.file_tagged', req, { file: f.name, docType });
+    res.json(await view(c.id));
   }));
 
   r.delete('/portal/application/files/:fileId', writes, csrf, session, wrap(async (req, res) => {
@@ -246,18 +288,16 @@ export function portalRoutes(ctx: Ctx, queue: JobQueue): Router {
     const policy = await policyFor(c);
     const et = (c.entityType ?? c.entityTypeRequested) as EntityType;
     const sum = buildChecklist(requirementsFor(policy, et, c.portal?.answers ?? {}), c.documents.map((d) => ({ id: d.id, docType: d.docType, expiresOn: d.expiresOn, issuedOn: d.issuedOn })), ctx.now());
-    if (c.status !== 'NEEDS_INFO' && !sum.complete) {
-      const missing = sum.items.filter((i) => i.required && i.status !== 'received').map((i) => i.label);
-      throw Object.assign(new HttpError(422, `still needed: ${missing.join(', ')}`), { missing });
-    }
-    if (!c.files.length) throw new HttpError(400, 'upload documents first');
+    // Documents are optional at this step: the application can be sent with gaps. The verifier records every
+    // missing document as a finding, the reviewer sees them and can ask the merchant for them (NEEDS_INFO).
+    const missing = sum.items.filter((i) => i.required && i.status !== 'received').map((i) => i.docType);
     const seq = (c.run?.seq ?? 0) + 1;
     await ctx.store.cases.update(c.id, (x) => {
       if (x.status === 'DRAFT') transition(x, 'RECEIVED', { type: 'system' });
       x.portal!.submittedAt = ctx.now().toISOString();
       x.run = { seq, state: 'queued' };
     });
-    await auditM(c, 'portal.submitted', req, { seq });
+    await auditM(c, 'portal.submitted', req, { seq, missing });
     await queue.enqueuePipeline({ caseId: c.id, runSeq: seq, from: 'classify' });
     res.status(202).json(await view(c.id));
   }));

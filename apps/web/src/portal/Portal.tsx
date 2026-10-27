@@ -288,7 +288,7 @@ function LinkPage() {
 /* ---------------- the application ---------------- */
 
 function AppPage() {
-  const { t, lang, setLang } = usePT();
+  const { t, lang, setLang, docLabel } = usePT();
   const qc = useQueryClient();
   const nav = useNavigate();
   const q = useQuery({
@@ -338,7 +338,7 @@ function AppPage() {
         <div className="pt-cols">
           <div className="pt-colmain">
             {v.requests.length > 0 && (
-              <ul className="pt-requests">{v.requests.map((r, i) => <li key={i}>{r.message}</li>)}</ul>
+              <ul className="pt-requests">{v.requests.map((r, i) => <li key={i}>{lang === 'ar' && r.docType ? `مطلوب: ${docLabel(r.docType, r.docType)}` : r.message}</li>)}</ul>
             )}
             <Checklist v={v} onView={set} />
             {v.application.canUpload && <DropAll onView={set} />}
@@ -375,7 +375,7 @@ function CountBar({ v }: { v: AppView }) {
   );
 }
 
-async function uploadFiles(files: FileList | File[], slot: string | null): Promise<{ view: AppView; added: { name: string; detected: string[]; matchesSlot: boolean | null }[]; duplicates: string[]; rejected: { name: string; reason: string }[] }> {
+async function uploadFiles(files: FileList | File[], slot: string | null): Promise<{ view: AppView; added: { name: string; detected: string[]; matchesSlot: boolean | null }[]; duplicates: string[]; reused?: string[]; rejected: { name: string; reason: string }[] }> {
   const fd = new FormData();
   for (const f of Array.from(files)) fd.append('files', f);
   if (slot) fd.append('slot', slot);
@@ -397,6 +397,8 @@ function useUpload(onView: (v: AppView) => void) {
       const mism = r.added.find((a) => slot && a.matchesSlot === false && a.detected.length && !a.detected.includes('unknown'));
       if (mism && slot) setNote({ tone: 'warn', text: t.notSlot(labelOf(mism.detected[0]), slotLabel ?? labelOf(slot)) });
       else if (r.rejected.length) setNote({ tone: 'bad', text: r.rejected.map((x) => `${x.name}: ${x.reason}`).join('. ') });
+      else if (r.reused?.length && slot) setNote({ tone: 'ok', text: t.reused(slotLabel ?? labelOf(slot)) });
+      else if (r.duplicates.length && !r.added.length) setNote({ tone: 'warn', text: t.duplicate(r.duplicates.join(', ')) });
     } catch (x) {
       setNote({ tone: 'bad', text: errMsg(x, t.errorGeneric) });
     } finally {
@@ -493,6 +495,16 @@ function Files({ v, onView }: { v: AppView; onView: (v: AppView) => void }) {
       setErr(errMsg(x, t.errorGeneric));
     }
   };
+  // a file we could not read: the merchant says what it is, a reviewer confirms it later
+  const tag = async (f: AppFile, docType: string) => {
+    if (!docType) return;
+    setErr(null);
+    try {
+      onView(await p.patch<AppView>(`/portal/application/files/${f.id}`, { docType }));
+    } catch (x) {
+      setErr(errMsg(x, t.errorGeneric));
+    }
+  };
   return (
     <section className="pt-panel">
       <h2>{t.yourFiles}</h2>
@@ -504,6 +516,12 @@ function Files({ v, onView }: { v: AppView; onView: (v: AppView) => void }) {
             <span className={`pt-file-s ${f.state}`}>
               {f.state === 'checking' ? t.checking : f.state === 'unrecognised' ? t.unrecognised : f.detected.map((d) => docLabel(d.docType, d.label)).join(', ')}
             </span>
+            {f.state === 'unrecognised' && v.application.canUpload && (
+              <select className="pt-what" aria-label={`${t.whatIsThis} ${f.name}`} value="" onChange={(e) => tag(f, e.target.value)}>
+                <option value="">{t.whatIsThis}</option>
+                {v.checklist.items.map((i) => <option key={i.docType} value={i.docType}>{docLabel(i.docType, i.label)}</option>)}
+              </select>
+            )}
             {v.application.canEdit && <button type="button" className="pt-linkbtn" onClick={() => remove(f)} aria-label={`${t.remove} ${f.name}`}>{t.remove}</button>}
           </li>
         ))}
@@ -531,7 +549,7 @@ function SubmitBox({ v, onView }: { v: AppView; onView: (v: AppView) => void }) 
   return (
     <section className="pt-panel pt-submit">
       <button type="button" className="pt-btn pt-btn-wide" disabled={!v.application.canSubmit || busy} onClick={send}>{busy ? t.submitting : t.submit}</button>
-      <p className="pt-help">{v.application.canSubmit ? t.submitHelp : t.submitBlocked}</p>
+      <p className="pt-help">{!v.application.canSubmit ? t.submitBlocked : (v.application.missingRequired ?? 0) > 0 ? t.submitMissing(v.application.missingRequired!) : t.submitHelp}</p>
       {err && <p className="pt-alert" role="alert">{err}</p>}
     </section>
   );

@@ -41,7 +41,7 @@ export interface AppView {
   tenant: PublicTenant;
   application: {
     ref: string; businessName: string; entityType: EntityType | null; entityLabel: string | null; entityLabelAr: string | null; answers: Record<string, string | boolean>; questions: Question[];
-    phase: Phase; canEdit: boolean; canUpload: boolean; canSubmit: boolean; submittedAt: string | null; contact: { name: string; emailMasked: string } | null; locale: 'en' | 'ar'; createdAt: string; updatedAt: string;
+    phase: Phase; canEdit: boolean; canUpload: boolean; canSubmit: boolean; missingRequired?: number; submittedAt: string | null; contact: { name: string; emailMasked: string } | null; locale: 'en' | 'ar'; createdAt: string; updatedAt: string;
   };
   checklist: { requiredTotal: number; requiredDone: number; pct: number; complete: boolean; items: ChecklistItem[] };
   files: AppFile[];

@@ -70,10 +70,20 @@ export function authenticate(ctx: Ctx) {
   };
 }
 
+const ROLE_NAMES: Record<Role, string> = { ADMIN: 'admin', UNDERWRITER: 'underwriter', SECOND_REVIEWER: 'second reviewer', VIEWER: 'viewer' };
+
 export function requireRole(...roles: Role[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) return res.status(401).json({ error: 'unauthenticated' });
-    if (req.user.role !== 'ADMIN' && !roles.includes(req.user.role)) return res.status(403).json({ error: 'forbidden' });
+    if (req.user.role !== 'ADMIN' && !roles.includes(req.user.role)) {
+      // say which role is needed instead of a bare "forbidden" (the web app translates it with the code and roles)
+      const allowed: Role[] = ['ADMIN', ...roles.filter((r) => r !== 'ADMIN')];
+      const names = allowed.map((r) => ROLE_NAMES[r]);
+      return res.status(403).json({
+        error: `Your role (${ROLE_NAMES[req.user.role]}) cannot do this. Sign in as ${names.length > 1 ? `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}` : names[0]}.`,
+        code: 'role_forbidden', role: req.user.role, allowed,
+      });
+    }
     next();
   };
 }

@@ -149,7 +149,9 @@ export function merchantView(ctx: Ctx, c: CaseRec, policy: Policy) {
       phase,
       canEdit: phase === 'collecting' && c.status === 'DRAFT',
       canUpload: canUpload(c),
-      canSubmit: canUpload(c) && (phase === 'needs_info' || sum.complete),
+      // documents are optional: the merchant can always send; anything missing becomes a finding for the reviewer
+      canSubmit: canUpload(c),
+      missingRequired: sum.items.filter((i) => i.required && i.status !== 'received').length,
       submittedAt: c.portal?.submittedAt ?? null,
       contact: c.portal ? { name: c.portal.contact.name, emailMasked: c.portal.contact.emailMasked } : null,
       locale: c.portal?.locale ?? 'en',

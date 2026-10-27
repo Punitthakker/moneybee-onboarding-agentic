@@ -92,11 +92,17 @@ Merchants start on their own, upload in any order and come back on any device. N
 3. The checklist shows every document with a hint in plain words. Upload against an item or drop everything at once: files are classified on arrival and the count bar ("6 of 11 documents in") fills up. Answers can be changed and wrong files removed until the application is sent.
 4. **Send my application** runs the agents. The case appears in the ops console (status `DRAFT` before sending, then the usual flow), and the merchant sees "with our team", "we need a little more" or the decision.
 
+Documents are optional at every step: the merchant can send with items missing (the page says how many), and ops can create a case without files. Every missing document becomes a `MISSING_DOC` finding; the reviewer uses **Request info** to reopen the portal for uploads. A file the agents cannot read can be tagged by the merchant ("What is this document?"), and one file can count for two checklist items (for example a scan holding the passport and the Emirates ID). Both are flagged for a reviewer to confirm.
+
+**Arabic and English.** The portal and the ops console have an EN / العربية switch (right to left in Arabic). The choice is remembered per browser (`?lang=ar` forces it). Agent findings, risk notes and the mock memo are translated by pattern; free text from a live model stays as written.
+
+**Demo pack.** `demo-pack/` holds three synthetic merchants (clean LLC, layered ownership, sanctions hit) marked SAMPLE on every page; `demo-pack/README.txt` says what each shows. Rebuild with `npx tsx fixtures/demo-pack.ts`; `apps/api/test/demo-pack.test.ts` keeps the promised outcomes true.
+
 Underwriters can also email the portal to the merchant of a case they created: case, tab **Merchant portal**, **Email upload link**.
 
 Requirements per company type live in `policies/base.json` (`entityTypes`, `questions`, `documentRules`); see `docs/DECISIONS.md`. Company types: sole establishment, mainland LLC, free zone company, other mainland forms and **branch of a UAE or foreign company**.
 
-API: `GET /public/requirements`, `POST /public/applications`, `POST /public/applications/resume`, `POST /portal/session`, `GET|PATCH /portal/application`, `POST /portal/application/documents`, `DELETE /portal/application/files/:id`, `POST /portal/application/submit`, `POST /cases/:id/portal-link`.
+API: `GET /public/requirements`, `POST /public/applications`, `POST /public/applications/resume`, `POST /portal/session`, `GET|PATCH /portal/application`, `POST /portal/application/documents`, `PATCH|DELETE /portal/application/files/:id`, `POST /portal/application/submit`, `POST /cases/:id/portal-link`.
 
 ## UAE PASS (mock and live)
 

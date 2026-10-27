@@ -158,3 +158,6 @@
 .pt-root:has(.pt-mbar) .pt-foot { padding-bottom: 80px; }
 @media (min-width: 980px) { .pt-mbar { display: none; } .pt-root:has(.pt-mbar) .pt-foot { padding-bottom: 28px; } }
 @media (prefers-reduced-motion: reduce) { .pt-count-bar .seg { transition: none; } }
+
+.pt-files .pt-what { grid-column: 1; justify-self: start; margin-top: 4px; }
+.pt-what { font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 10px; border: 1px solid var(--pt-line); background: #fff; color: var(--ink); max-width: 220px; }

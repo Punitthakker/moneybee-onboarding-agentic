@@ -1,7 +1,8 @@
 import { createContext, useContext, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type Me } from './api';
+import { api, can, type Me } from './api';
+import { LangProvider, LangToggle, useI18n } from './i18n';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { NewCase } from './pages/NewCase';
@@ -35,7 +36,7 @@ export function App() {
       <Route path="/sim/uaepass/login" element={<SimLogin />} />
       <Route path="/sim/uaepass/share/:no" element={<SimShare />} />
       <Route path="/sim/uaepass/sign" element={<SimSign />} />
-      <Route path="*" element={<OpsApp />} />
+      <Route path="*" element={<LangProvider><OpsApp /></LangProvider>} />
     </Routes>
   );
 }
@@ -44,11 +45,12 @@ function OpsApp() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [menu, setMenu] = useState(false);
+  const { t, role, lang } = useI18n();
   const me = useQuery({ queryKey: ['me'], queryFn: () => api.get<{ user: Me; tenant: PublicTenant }>('/auth/me'), retry: false });
   const pub = useQuery({ queryKey: ['public-tenant'], queryFn: () => api.get<{ tenant: PublicTenant }>(publicTenantPath()).then((r) => r.tenant), enabled: !me.isLoading && !me.data, staleTime: 60_000 });
   const tenant = me.data?.tenant ?? pub.data ?? null;
   useTenantTheme(tenant);
-  if (me.isLoading) return <div className="login"><span className="muted">Loading</span></div>;
+  if (me.isLoading) return <div className="login"><span className="muted">{t('Loading')}</span></div>;
   if (!me.data) return <Login tenant={tenant} onDone={() => qc.invalidateQueries({ queryKey: ['me'] })} />;
   const user = me.data.user;
   const logout = async () => {
@@ -56,10 +58,11 @@ function OpsApp() {
     qc.clear();
     nav('/');
   };
+  // roles that cannot create cases do not see "New case" (the API refuses it for them)
   const links = [
-    ['/', 'Cases'],
-    ['/new', 'New case'],
-    ['/settings', 'Settings'],
+    ['/', t('Cases')],
+    ...(can.write(user) ? [['/new', t('New case')]] : []),
+    ['/settings', t('Settings')],
   ];
   return (
     <MeCtx.Provider value={user}>
@@ -72,16 +75,17 @@ function OpsApp() {
               {links.map(([to, l]) => <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>{l}</NavLink>)}
             </div>
             <div className="nav-right">
-              <span className="hide-sm">{user.name} <span className="pill">{user.role.replace('_', ' ')}</span></span>
-              <button className="btn btn-dark btn-sm hide-sm" onClick={logout}>Sign out</button>
-              <button className="btn btn-sm" style={{ display: 'none' }} id="menu-btn" aria-expanded={menu} aria-label="Menu" onClick={() => setMenu(!menu)}>☰</button>
+              <LangToggle />
+              <span className="hide-sm">{user.name} <span className="pill">{role(user.role)}</span></span>
+              <button className="btn btn-dark btn-sm hide-sm" onClick={logout}>{t('Sign out')}</button>
+              <button className="btn btn-sm" style={{ display: 'none' }} id="menu-btn" aria-expanded={menu} aria-label={t('Menu')} onClick={() => setMenu(!menu)}>☰</button>
             </div>
           </nav>
           {menu && (
             <div className="card" style={{ marginTop: 8, padding: 12 }}>
               <div className="stack">
                 {links.map(([to, l]) => <NavLink key={to} to={to} onClick={() => setMenu(false)}>{l}</NavLink>)}
-                <button className="btn btn-dark btn-sm" onClick={logout}>Sign out</button>
+                <button className="btn btn-dark btn-sm" onClick={logout}>{t('Sign out')}</button>
               </div>
             </div>
           )}
@@ -97,7 +101,7 @@ function OpsApp() {
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
-        <PoweredByMoneyBee />
+        <PoweredByMoneyBee locale={lang} />
       </div>
       </TenantCtx.Provider>
     </MeCtx.Provider>

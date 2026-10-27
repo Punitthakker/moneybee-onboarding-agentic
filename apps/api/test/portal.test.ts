@@ -53,7 +53,7 @@ describe('merchant portal: start, magic link, upload, submit', () => {
 
     // the start call already signed this browser in
     let v = (await a.get('/api/v1/portal/application').expect(200)).body;
-    expect(v.application).toMatchObject({ phase: 'collecting', entityType: 'llc', canEdit: true, canUpload: true, canSubmit: false });
+    expect(v.application).toMatchObject({ phase: 'collecting', entityType: 'llc', canEdit: true, canUpload: true, canSubmit: true });
     expect(v.tenant.id).toBe('botim');
     // the VAT certificate is required (the answer says VAT registered; this acquirer also always asks for it)
     const vat = v.checklist.items.find((i: { docType: string }) => i.docType === 'vat_certificate');
@@ -70,9 +70,9 @@ describe('merchant portal: start, magic link, upload, submit', () => {
     expect(up.body.added[0]).toMatchObject({ name: 'trade_licence.pdf', detected: ['trade_licence'], matchesSlot: true });
     expect(up.body.view.checklist.items.find((i: { docType: string }) => i.docType === 'trade_licence').status).toBe('received');
 
-    // submitting with documents missing is refused with the list of what is left
-    const early = await a.post('/api/v1/portal/application/submit').set(CSRF).send({}).expect(422);
-    expect(early.body.error).toMatch(/still needed: .*MOA/);
+    // documents are optional: the view says how many required ones are still missing, sending stays possible
+    expect(up.body.view.application.canSubmit).toBe(true);
+    expect(up.body.view.application.missingRequired).toBeGreaterThan(0);
 
     // drop everything else in one go (bulk upload, no slot)
     let req = a.post('/api/v1/portal/application/documents').set(CSRF);
@@ -108,6 +108,57 @@ describe('merchant portal: start, magic link, upload, submit', () => {
     // MoneyBee staff of another tenant cannot see it
     const mb = await t.login('uw@t.local');
     await mb.get(`/api/v1/cases/${row.id}`).expect(404);
+  });
+
+  it('sends an application with no documents at all; every missing document becomes a finding for the reviewer', async () => {
+    const t = await makeTestApp();
+    const { a, res } = await start(t);
+    await a.post('/api/v1/portal/application/submit').set(CSRF).send({}).expect(202);
+    await t.queue.idle?.();
+    const v = (await a.get('/api/v1/portal/application').expect(200)).body;
+    expect(v.application.phase).toBe('in_review');
+    const uw = await t.login('uw@botim.test');
+    const row = (await uw.get('/api/v1/cases').expect(200)).body.cases.find((c: { ref: string }) => c.ref === res.body.ref);
+    expect(row.status).toBe('AWAITING_REVIEW');
+    const full = (await uw.get(`/api/v1/cases/${row.id}`).expect(200)).body.case;
+    const missing = full.findings.filter((f: { code: string }) => f.code === 'MISSING_DOC').map((f: { message: string }) => f.message).join(' ');
+    expect(missing).toMatch(/Trade licence/);
+    expect(missing).toMatch(/Emirates ID/);
+    // the reviewer asks for the documents: the application opens again for uploads
+    await uw.post(`/api/v1/cases/${row.id}/review`).set(CSRF).send({ decision: 'request_info', notes: 'Please upload your trade licence and IDs' }).expect(200);
+    const again = (await a.get('/api/v1/portal/application').expect(200)).body;
+    expect(again.application).toMatchObject({ phase: 'needs_info', canUpload: true, canSubmit: true });
+    expect(again.requests.length).toBeGreaterThan(0);
+  });
+
+  it('counts one file for a second checklist item, and lets the merchant say what an unrecognised file is', async () => {
+    const t = await makeTestApp();
+    const { a } = await start(t);
+    const dir = path.join(FIX, '02-llc');
+    const shr = fs.readFileSync(path.join(dir, 'register_of_shareholders.pdf'));
+    await a.post('/api/v1/portal/application/documents').set(CSRF).field('slot', 'register_of_shareholders').attach('files', shr, 'E-Partner List.pdf').expect(201);
+    // the same partner list sent again for the MOA slot: not stored twice, counted for both
+    const again = await a.post('/api/v1/portal/application/documents').set(CSRF).field('slot', 'moa_aoa').attach('files', shr, 'E-Partner List.pdf').expect(201);
+    expect(again.body.reused).toEqual(['E-Partner List.pdf']);
+    expect(again.body.duplicates).toEqual([]);
+    const items = again.body.view.checklist.items as { docType: string; status: string }[];
+    expect(items.find((i) => i.docType === 'register_of_shareholders')!.status).toBe('received');
+    expect(items.find((i) => i.docType === 'moa_aoa')!.status).toBe('received');
+    expect(again.body.view.files).toHaveLength(1);
+
+    // a real scan the mock parser cannot read: classified from its file name, flagged for review
+    const scan = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF');
+    const lic = await a.post('/api/v1/portal/application/documents').set(CSRF).attach('files', scan, 'E-License.pdf').expect(201);
+    expect(lic.body.added[0].detected).toEqual(['trade_licence']);
+    // a file with no useful name stays unrecognised until the merchant says what it is
+    const photo = Buffer.concat([scan, Buffer.from(' ')]);
+    const up = await a.post('/api/v1/portal/application/documents').set(CSRF).attach('files', photo, 'PHOTO-2026-10-10.pdf').expect(201);
+    expect(up.body.added[0].detected).toEqual(['unknown']);
+    const fileId = up.body.added[0].id;
+    const tagged = (await a.patch(`/api/v1/portal/application/files/${fileId}`).set(CSRF).send({ docType: 'passport' }).expect(200)).body;
+    expect(tagged.files.find((f: { id: string }) => f.id === fileId).detected.map((d: { docType: string }) => d.docType)).toEqual(['passport']);
+    expect(tagged.checklist.items.find((i: { docType: string }) => i.docType === 'passport').status).toBe('received');
+    await a.patch(`/api/v1/portal/application/files/${fileId}`).set(CSRF).send({ docType: 'not_a_type' }).expect(400);
   });
 
   it('exchanges the emailed link for a session on another device, and rejects bad or expired links', async () => {

@@ -1,12 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { STATUS_TONE } from '../types';
+import { useI18n } from '../i18n';
 
 export function StatusPill({ s }: { s: string }) {
-  return <span className={`pill ${STATUS_TONE[s] ?? ''}`}>{s.replace(/_/g, ' ')}</span>;
+  const { status } = useI18n();
+  return <span className={`pill ${STATUS_TONE[s] ?? ''}`}>{status(s)}</span>;
 }
 export function RiskChip({ r }: { r?: string | null }) {
+  const { risk } = useI18n();
   if (!r) return <span className="muted small">-</span>;
-  return <span className={`risk ${r}`}>{r}</span>;
+  return <span className={`risk ${r}`}>{risk(r)}</span>;
 }
 export function Meter({ v, label }: { v: number | null | undefined; label?: string }) {
   if (v === null || v === undefined) return <span className="muted small">-</span>;
@@ -28,7 +31,8 @@ export function Empty({ title, children }: { title: string; children?: ReactNode
   );
 }
 export function MockBanner({ what }: { what: string }) {
-  return <div className="banner mock" role="status">MOCK {what.toUpperCase()} - no real external check was performed</div>;
+  const { t } = useI18n();
+  return <div className="banner mock" role="status">{t(`MOCK ${what.toUpperCase()} - no real external check was performed`)}</div>;
 }
 export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   useEffect(() => {

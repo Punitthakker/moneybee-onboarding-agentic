@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, can, type Role } from '../api';
 import { useMe, useTenant } from '../App';
 import { MockBanner, toast } from '../components/ui';
+import { useI18n } from '../i18n';
 
 interface SettingsRes { tokenTtlHours: number; webhookUrl: string; webhookSecretSet: boolean; llmMode: string; screeningProvider: string; screeningIsMock: boolean; model: string }
 interface PolicyRes { version: number; base: Record<string, unknown>; acquirers: Record<string, unknown>[]; by: string; at: string; note: string }
@@ -14,22 +15,23 @@ export function Settings() {
   // global token, webhook and policy settings belong to the platform tenant; partner admins see them read-only
   const platform = useTenant()?.kind === 'platform';
   const [tab, setTab] = useState<'policy' | 'acquirers' | 'tokens' | 'users'>('policy');
+  const { t } = useI18n();
   return (
     <div className="stack" style={{ gap: 22 }}>
       <div>
-        <p className="eyebrow">Settings</p>
-        <h1 className="h1">Policy and controls.<span className="grey">Every change is versioned.</span></h1>
+        <p className="eyebrow">{t('Settings')}</p>
+        <h1 className="h1">{t('Policy and controls.')}<span className="grey">{t('Every change is versioned.')}</span></h1>
       </div>
-      {!admin && <div className="banner warn">Read only. Only an ADMIN can change settings.</div>}
+      {!admin && <div className="banner warn">{t('Read only. Only an ADMIN can change settings.')}</div>}
       <div className="tabs">
         {([['policy', 'Base policy'], ['acquirers', 'Acquirer overrides'], ['tokens', 'Tokens and webhook'], ['users', 'Users and roles']] as const).map(([k, l]) => (
-          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>
+          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{t(l)}</button>
         ))}
       </div>
-      {admin && !platform && <div className="banner warn">Policies, acquirers, tokens and webhook are managed by MoneyBee for all partners. You can manage your own users.</div>}
+      {admin && !platform && <div className="banner warn">{t('Policies, acquirers, tokens and webhook are managed by MoneyBee for all partners. You can manage your own users.')}</div>}
       {(tab === 'policy' || tab === 'acquirers') && <PolicyEditor which={tab} admin={admin && platform} />}
       {tab === 'tokens' && <TokenSettings admin={admin && platform} />}
-      {tab === 'users' && (admin ? <Users /> : <p className="muted">Admins manage users.</p>)}
+      {tab === 'users' && (admin ? <Users /> : <p className="muted">{t('Admins manage users.')}</p>)}
     </div>
   );
 }
@@ -144,40 +146,41 @@ function TokenSettings({ admin }: { admin: boolean }) {
 }
 
 function Users() {
+  const { t, role, err } = useI18n();
   const u = useQuery({ queryKey: ['users'], queryFn: () => api.get<{ users: UserRow[] }>('/users') });
   const [f, setF] = useState({ email: '', name: '', role: 'UNDERWRITER' as Role, password: '' });
   const create = async () => {
     try {
       await api.post('/users', f);
-      toast('User created');
+      toast(t('User created'));
       setF({ email: '', name: '', role: 'UNDERWRITER', password: '' });
       u.refetch();
     } catch (e) {
-      toast((e as Error).message);
+      toast(err(e));
     }
   };
   return (
     <div className="stack">
       <div className="card">
-        <table className="table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Active</th></tr></thead>
+        <table className="table"><thead><tr><th>{t('Name')}</th><th>{t('Email')}</th><th>{t('Role')}</th><th>{t('Active')}</th></tr></thead>
           <tbody>{u.data?.users.map((x) => (
             <tr key={x.id}>
               <td>{x.name}</td><td className="mono small">{x.email}</td>
-              <td><select className="select" style={{ height: 34, maxWidth: 200 }} value={x.role} onChange={async (e) => { await api.patch(`/users/${x.id}`, { role: e.target.value }); u.refetch(); }}>{['ADMIN', 'UNDERWRITER', 'SECOND_REVIEWER', 'VIEWER'].map((r) => <option key={r}>{r}</option>)}</select></td>
+              <td><select className="select" style={{ height: 34, maxWidth: 200 }} value={x.role} onChange={async (e) => { await api.patch(`/users/${x.id}`, { role: e.target.value }); u.refetch(); }}>{['ADMIN', 'UNDERWRITER', 'SECOND_REVIEWER', 'VIEWER'].map((r) => <option key={r} value={r}>{role(r)}</option>)}</select></td>
               <td><input type="checkbox" checked={x.active} aria-label="active" onChange={async (e) => { await api.patch(`/users/${x.id}`, { active: e.target.checked }); u.refetch(); }} /></td>
             </tr>
           ))}</tbody>
         </table>
       </div>
       <div className="card card-paper">
-        <h3 className="h3">Add user</h3>
+        <h3 className="h3">{t('Add user')}</h3>
         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', marginTop: 10 }}>
-          <input className="input" placeholder="Name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <input className="input" placeholder="Email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
-          <select className="select" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as Role })}>{['ADMIN', 'UNDERWRITER', 'SECOND_REVIEWER', 'VIEWER'].map((r) => <option key={r}>{r}</option>)}</select>
-          <input className="input" type="password" placeholder="Password (12+ chars)" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
+          <input className="input" placeholder={t('Name')} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <input className="input" placeholder={t('Email')} dir="ltr" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+          <select className="select" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as Role })}>{['ADMIN', 'UNDERWRITER', 'SECOND_REVIEWER', 'VIEWER'].map((r) => <option key={r} value={r}>{role(r)}</option>)}</select>
+          <input className="input" type="password" placeholder={t('Password (12+ chars)')} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
         </div>
-        <button className="btn btn-dark" style={{ marginTop: 10 }} onClick={create}>Create user</button>
+        <button className="btn btn-dark" style={{ marginTop: 10 }} onClick={create}>{t('Create user')}</button>
       </div>
     </div>
   );
