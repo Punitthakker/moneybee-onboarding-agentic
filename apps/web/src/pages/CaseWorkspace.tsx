@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, can } from '../api';
 import { useMe } from '../App';
-import { DocViewer } from '../components/DocViewer';
+// the PDF viewer (pdf.js) is large: load it only when a case is opened
+const DocViewer = lazy(() => import('../components/DocViewer').then((m) => ({ default: m.DocViewer })));
 import { OwnershipGraph } from '../components/OwnershipGraph';
 import { UaePassPanel } from '../uaepass/OpsPanel';
 import { MerchantPanel } from './MerchantPanel';
@@ -111,7 +112,9 @@ export function CaseWorkspace() {
               })}
             </div>
           </div>
-          <DocViewer caseId={id} file={file} page={sel.page ?? doc?.pageStart ?? 1} snippet={sel.docId === doc?.id ? sel.snippet : undefined} />
+          <Suspense fallback={<div className="viewer" style={{ display: 'grid', placeItems: 'center' }}><span className="muted small">{t('Loading PDF')}</span></div>}>
+            <DocViewer caseId={id} file={file} page={sel.page ?? doc?.pageStart ?? 1} snippet={sel.docId === doc?.id ? sel.snippet : undefined} />
+          </Suspense>
           <Checklist c={c} />
         </div>
 
