@@ -25,7 +25,7 @@ export function Login({ onDone, tenant }: { onDone: () => void; tenant?: PublicT
   return (
     <div className="login hexbg">
       <form className="card" style={{ width: 'min(440px,100%)', padding: 32, boxShadow: 'var(--shadow-soft)' }} onSubmit={submit}>
-        <div className="row between" style={{ marginBottom: 26, flexWrap: 'nowrap' }}><TenantMark tenant={tenant} /><LangToggle /></div>
+        <div className="row between" style={{ marginBottom: 26, flexWrap: 'wrap', gap: 12 }}><TenantMark tenant={tenant} /><LangToggle /></div>
         <p className="eyebrow">{t('Merchant onboarding, done by agents')}</p>
         <h1 className="h2">{t('Sign in.')}<span className="grey">{t('Review what the agents prepared.')}</span></h1>
         <div className="stack" style={{ marginTop: 24 }}>
