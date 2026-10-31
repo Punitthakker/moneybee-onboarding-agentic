@@ -60,6 +60,28 @@ const EnvSchema = z.object({
 
   /** Where the merchant portal lives. Used for UAE PASS redirects. */
   PUBLIC_WEB_URL: z.string().default('http://localhost:5173'),
+  /** acquirer policy the onboarding bot files cases under; defaults to the first acquirer in /policies/acquirers */
+  BOT_ACQUIRER_CODE: z.string().optional(),
+  /** off: no WhatsApp routes. mock: webhook mounted, outbound recorded in memory (dev/sim). live: Meta Cloud API. */
+  WHATSAPP_MODE: z.enum(['off', 'mock', 'live']).default('off'),
+  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+  WHATSAPP_APP_SECRET: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_API_VERSION: z.string().default('v21.0'),
+  /** approved template language codes */
+  WHATSAPP_TEMPLATE_LANG_EN: z.string().default('en'),
+  WHATSAPP_TEMPLATE_LANG_AR: z.string().default('ar'),
+  /** off: no Telegram routes. mock: webhook mounted, outbound recorded. live: Telegram Bot API. */
+  TELEGRAM_MODE: z.enum(['off', 'mock', 'live']).default('off'),
+  /** from BotFather */
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  /** random string; sent by Telegram in X-Telegram-Bot-Api-Secret-Token and set via setWebhook on boot */
+  TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
+  /** when set, the API registers PUBLIC_API_URL/api/v1/channels/telegram/webhook with Telegram on boot */
+  TELEGRAM_SET_WEBHOOK_ON_BOOT: bool(true),
+  /** seconds between outbox/nudge sweeps */
+  BOT_TICK_SECONDS: z.coerce.number().int().positive().default(60),
   /** mock: built-in simulator, no credentials. live: real UAE PASS (needs onboarding with the UAE PASS team). */
   UAEPASS_MODE: z.enum(['mock', 'live']).default('mock'),
   UAEPASS_SIGNING_ENABLED: bool(false),

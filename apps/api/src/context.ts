@@ -27,4 +27,6 @@ export interface Ctx {
   /** secret used for signing short-lived file URLs */
   fileUrlSecret: string;
   now: () => Date;
+  /** set by a channel adapter: called after a human decision queues a merchant message, so it is sent right away */
+  onBotOutbox?: (sessionId: string) => Promise<void>;
 }

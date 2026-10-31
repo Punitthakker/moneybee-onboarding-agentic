@@ -10,7 +10,7 @@ export interface LlmDocument {
 }
 
 export interface LlmRequest<T> {
-  agent: 'classifier' | 'extractor' | 'verifier_explain' | 'underwriter_memo' | 'gap_chaser';
+  agent: 'classifier' | 'extractor' | 'verifier_explain' | 'underwriter_memo' | 'gap_chaser' | 'bot_mcc' | 'bot_faq';
   promptVersion: string;
   /** static, cacheable policy / checklist context */
   system: string;

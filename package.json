@@ -20,6 +20,8 @@
     "e2e": "playwright test",
     "schema": "tsx packages/shared/scripts/gen-schema.ts",
     "setup": "node scripts/setup.mjs",
+    "wa:sim": "node scripts/wa-sim.mjs",
+    "tg:sim": "node scripts/tg-sim.mjs",
     "up": "node scripts/setup.mjs && docker compose up -d --build",
     "down": "docker compose down"
   },

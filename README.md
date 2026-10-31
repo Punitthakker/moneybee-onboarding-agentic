@@ -48,6 +48,16 @@ npm run e2e        # Playwright happy path (needs the stack running)
 npm run typecheck
 ```
 
+## Onboarding bot (WhatsApp and Telegram)
+
+Merchants can onboard entirely in chat: a guided Q&A (entity type, what they sell, volumes, customers), MCC classification, a document checklist driven by the same policy as the verifier, a pre-approval band with indicative pricing, then the file lands in this back office as a normal case (owner `bot@moneybee.local`, "Bot intake" tab). Underwriters decide here; the decision is relayed to the merchant on their channel. Agents never approve.
+
+```bash
+WHATSAPP_MODE=mock TELEGRAM_MODE=mock npm run dev     # default in docker compose and .env.example
+npm run wa:sim    # or npm run tg:sim - chat with the bot from the terminal, send fixture PDFs with /file
+```
+Go-live steps, templates and the threat model are in `docs/bot/` (`05-whatsapp-runbook.md`, `06-telegram-runbook.md`). Pricing and MCC tiers in `policies/bot.json` are EXAMPLE VALUES to be set by commercial and compliance.
+
 ## UAE PASS (mock and live)
 
 Merchants can sign in with UAE PASS, share their Emirates ID and Residence Visa from the UAE PASS app, and (behind a flag) sign the merchant agreement. It runs on a built-in simulator by default, so the demo needs no credentials.

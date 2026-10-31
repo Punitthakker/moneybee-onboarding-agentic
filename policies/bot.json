@@ -1,0 +1,1410 @@
+{
+  "version": 1,
+  "label": "MoneyBee onboarding bot policy (EXAMPLE VALUES - to be set by commercial and compliance)",
+  "mccCatalogue": [
+    {
+      "mcc": "5411",
+      "labelEn": "Grocery and supermarkets",
+      "labelAr": "بقالة وسوبرماركت",
+      "tier": "LOW",
+      "category": "retail",
+      "keywords": [
+        "grocery",
+        "baqala",
+        "supermarket",
+        "minimart"
+      ]
+    },
+    {
+      "mcc": "5499",
+      "labelEn": "Specialty food stores",
+      "labelAr": "متاجر أغذية متخصصة",
+      "tier": "LOW",
+      "category": "food",
+      "keywords": [
+        "dates",
+        "nuts",
+        "organic",
+        "sweets",
+        "chocolate",
+        "coffee beans"
+      ]
+    },
+    {
+      "mcc": "5462",
+      "labelEn": "Bakeries",
+      "labelAr": "مخابز",
+      "tier": "LOW",
+      "category": "food",
+      "keywords": [
+        "bakery",
+        "cake",
+        "pastry"
+      ]
+    },
+    {
+      "mcc": "5812",
+      "labelEn": "Restaurants",
+      "labelAr": "مطاعم",
+      "tier": "LOW",
+      "category": "food",
+      "keywords": [
+        "restaurant",
+        "cafe",
+        "coffee shop",
+        "dine"
+      ]
+    },
+    {
+      "mcc": "5814",
+      "labelEn": "Fast food and delivery",
+      "labelAr": "وجبات سريعة وتوصيل",
+      "tier": "LOW",
+      "category": "food",
+      "keywords": [
+        "delivery",
+        "cloud kitchen",
+        "fast food",
+        "burger",
+        "shawarma"
+      ]
+    },
+    {
+      "mcc": "5811",
+      "labelEn": "Caterers",
+      "labelAr": "تموين",
+      "tier": "MEDIUM",
+      "category": "food",
+      "keywords": [
+        "catering",
+        "caterer",
+        "events food"
+      ]
+    },
+    {
+      "mcc": "5311",
+      "labelEn": "Department stores",
+      "labelAr": "متاجر متعددة الأقسام",
+      "tier": "LOW",
+      "category": "retail",
+      "keywords": [
+        "department store"
+      ]
+    },
+    {
+      "mcc": "5399",
+      "labelEn": "General merchandise",
+      "labelAr": "سلع عامة",
+      "tier": "LOW",
+      "category": "retail",
+      "keywords": [
+        "general trading",
+        "merchandise",
+        "gifts"
+      ]
+    },
+    {
+      "mcc": "5621",
+      "labelEn": "Women's clothing",
+      "labelAr": "ملابس نسائية",
+      "tier": "LOW",
+      "category": "fashion_beauty",
+      "keywords": [
+        "abaya",
+        "women fashion",
+        "dresses",
+        "ladies"
+      ]
+    },
+    {
+      "mcc": "5651",
+      "labelEn": "Family clothing",
+      "labelAr": "ملابس عائلية",
+      "tier": "LOW",
+      "category": "fashion_beauty",
+      "keywords": [
+        "clothing",
+        "apparel",
+        "kids wear",
+        "fashion"
+      ]
+    },
+    {
+      "mcc": "5661",
+      "labelEn": "Shoes",
+      "labelAr": "أحذية",
+      "tier": "LOW",
+      "category": "fashion_beauty",
+      "keywords": [
+        "shoes",
+        "sneakers",
+        "footwear"
+      ]
+    },
+    {
+      "mcc": "5699",
+      "labelEn": "Accessories and apparel",
+      "labelAr": "إكسسوارات وملابس",
+      "tier": "LOW",
+      "category": "fashion_beauty",
+      "keywords": [
+        "accessories",
+        "bags",
+        "hijab",
+        "scarves"
+      ]
+    },
+    {
+      "mcc": "5977",
+      "labelEn": "Cosmetics and perfume",
+      "labelAr": "مستحضرات تجميل وعطور",
+      "tier": "MEDIUM",
+      "category": "fashion_beauty",
+      "keywords": [
+        "perfume",
+        "oud",
+        "cosmetics",
+        "skincare",
+        "makeup",
+        "fragrance"
+      ]
+    },
+    {
+      "mcc": "7230",
+      "labelEn": "Salons and barbers",
+      "labelAr": "صالونات وحلاقة",
+      "tier": "LOW",
+      "category": "fashion_beauty",
+      "keywords": [
+        "salon",
+        "barber",
+        "hair",
+        "nails"
+      ]
+    },
+    {
+      "mcc": "7298",
+      "labelEn": "Health and beauty spas",
+      "labelAr": "منتجعات صحية وتجميل",
+      "tier": "MEDIUM",
+      "category": "fashion_beauty",
+      "keywords": [
+        "spa",
+        "facial",
+        "beauty centre"
+      ]
+    },
+    {
+      "mcc": "5712",
+      "labelEn": "Furniture and home",
+      "labelAr": "أثاث ومنزل",
+      "tier": "LOW",
+      "category": "retail",
+      "keywords": [
+        "furniture",
+        "sofa",
+        "home decor",
+        "interior"
+      ]
+    },
+    {
+      "mcc": "5722",
+      "labelEn": "Household appliances",
+      "labelAr": "أجهزة منزلية",
+      "tier": "MEDIUM",
+      "category": "retail",
+      "keywords": [
+        "appliances",
+        "kitchen appliances"
+      ]
+    },
+    {
+      "mcc": "5732",
+      "labelEn": "Electronics stores",
+      "labelAr": "متاجر إلكترونيات",
+      "tier": "HIGH",
+      "category": "electronics",
+      "keywords": [
+        "electronics",
+        "laptop",
+        "gadgets",
+        "camera",
+        "headphones"
+      ]
+    },
+    {
+      "mcc": "4812",
+      "labelEn": "Telecom equipment and phones",
+      "labelAr": "معدات اتصالات وهواتف",
+      "tier": "HIGH",
+      "category": "electronics",
+      "keywords": [
+        "mobile phones",
+        "iphone",
+        "smartphone",
+        "phone shop"
+      ]
+    },
+    {
+      "mcc": "5734",
+      "labelEn": "Computer software stores",
+      "labelAr": "متاجر برمجيات",
+      "tier": "MEDIUM",
+      "category": "electronics",
+      "keywords": [
+        "software store",
+        "licenses"
+      ]
+    },
+    {
+      "mcc": "5941",
+      "labelEn": "Sporting goods",
+      "labelAr": "سلع رياضية",
+      "tier": "LOW",
+      "category": "retail",
+      "keywords": [
+        "sports",
+        "gym equipment",
+        "fitness gear"
+      ]
+    },
+    {
+      "mcc": "5945",
+      "labelEn": "Toys and games",
+      "labelAr": "ألعاب",
+      "tier": "LOW",
+      "category": "retail",
+      "keywords": [
+        "toys",
+        "board games",
+        "kids"
+      ]
+    },
+    {
+      "mcc": "5992",
+      "labelEn": "Florists",
+      "labelAr": "زهور",
+      "tier": "LOW",
+      "category": "retail",
+      "keywords": [
+        "flowers",
+        "florist",
+        "bouquet"
+      ]
+    },
+    {
+      "mcc": "5995",
+      "labelEn": "Pet shops",
+      "labelAr": "متاجر حيوانات أليفة",
+      "tier": "LOW",
+      "category": "retail",
+      "keywords": [
+        "pet",
+        "pets",
+        "dog",
+        "cat food"
+      ]
+    },
+    {
+      "mcc": "5999",
+      "labelEn": "Miscellaneous retail",
+      "labelAr": "تجزئة متنوعة",
+      "tier": "MEDIUM",
+      "category": "retail",
+      "keywords": [
+        "retail",
+        "shop",
+        "store",
+        "online store",
+        "ecommerce"
+      ]
+    },
+    {
+      "mcc": "5944",
+      "labelEn": "Jewellery and watches",
+      "labelAr": "مجوهرات وساعات",
+      "tier": "HIGH",
+      "category": "retail",
+      "keywords": [
+        "jewellery",
+        "jewelry",
+        "gold",
+        "diamond",
+        "watches",
+        "fine jewellery"
+      ]
+    },
+    {
+      "mcc": "5094",
+      "labelEn": "Precious stones and metals wholesale",
+      "labelAr": "أحجار كريمة ومعادن",
+      "tier": "RESTRICTED",
+      "category": "retail",
+      "keywords": [
+        "bullion",
+        "gold trading",
+        "precious metals",
+        "diamonds wholesale"
+      ]
+    },
+    {
+      "mcc": "7392",
+      "labelEn": "Consulting and management services",
+      "labelAr": "استشارات وخدمات إدارية",
+      "tier": "LOW",
+      "category": "professional_services",
+      "keywords": [
+        "consulting",
+        "consultancy",
+        "advisory",
+        "management"
+      ]
+    },
+    {
+      "mcc": "8111",
+      "labelEn": "Legal services",
+      "labelAr": "خدمات قانونية",
+      "tier": "LOW",
+      "category": "professional_services",
+      "keywords": [
+        "law firm",
+        "legal",
+        "lawyer",
+        "attorney"
+      ]
+    },
+    {
+      "mcc": "8931",
+      "labelEn": "Accounting and audit",
+      "labelAr": "محاسبة وتدقيق",
+      "tier": "LOW",
+      "category": "professional_services",
+      "keywords": [
+        "accounting",
+        "audit",
+        "bookkeeping",
+        "tax"
+      ]
+    },
+    {
+      "mcc": "8999",
+      "labelEn": "Professional services other",
+      "labelAr": "خدمات مهنية أخرى",
+      "tier": "MEDIUM",
+      "category": "professional_services",
+      "keywords": [
+        "services",
+        "freelance",
+        "professional"
+      ]
+    },
+    {
+      "mcc": "7311",
+      "labelEn": "Advertising and marketing",
+      "labelAr": "إعلان وتسويق",
+      "tier": "MEDIUM",
+      "category": "professional_services",
+      "keywords": [
+        "marketing",
+        "advertising",
+        "agency",
+        "social media",
+        "branding"
+      ]
+    },
+    {
+      "mcc": "7399",
+      "labelEn": "Business services other",
+      "labelAr": "خدمات أعمال أخرى",
+      "tier": "MEDIUM",
+      "category": "professional_services",
+      "keywords": [
+        "pro services",
+        "typing",
+        "business setup",
+        "visa services",
+        "document clearing"
+      ]
+    },
+    {
+      "mcc": "8911",
+      "labelEn": "Architecture and engineering",
+      "labelAr": "هندسة وعمارة",
+      "tier": "LOW",
+      "category": "professional_services",
+      "keywords": [
+        "architect",
+        "engineering",
+        "design studio"
+      ]
+    },
+    {
+      "mcc": "1520",
+      "labelEn": "Contractors and construction",
+      "labelAr": "مقاولات وبناء",
+      "tier": "MEDIUM",
+      "category": "professional_services",
+      "keywords": [
+        "contractor",
+        "construction",
+        "fit out",
+        "renovation"
+      ]
+    },
+    {
+      "mcc": "7349",
+      "labelEn": "Cleaning and maintenance",
+      "labelAr": "تنظيف وصيانة",
+      "tier": "LOW",
+      "category": "professional_services",
+      "keywords": [
+        "cleaning",
+        "maintenance",
+        "pest control",
+        "maid"
+      ]
+    },
+    {
+      "mcc": "8299",
+      "labelEn": "Education and training",
+      "labelAr": "تعليم وتدريب",
+      "tier": "LOW",
+      "category": "education",
+      "keywords": [
+        "training",
+        "course",
+        "tutoring",
+        "academy",
+        "classes",
+        "coaching"
+      ]
+    },
+    {
+      "mcc": "8211",
+      "labelEn": "Schools",
+      "labelAr": "مدارس",
+      "tier": "LOW",
+      "category": "education",
+      "keywords": [
+        "school",
+        "nursery",
+        "kindergarten"
+      ]
+    },
+    {
+      "mcc": "8249",
+      "labelEn": "Vocational and trade schools",
+      "labelAr": "معاهد مهنية",
+      "tier": "MEDIUM",
+      "category": "education",
+      "keywords": [
+        "bootcamp",
+        "certification",
+        "institute"
+      ]
+    },
+    {
+      "mcc": "4722",
+      "labelEn": "Travel agencies and tour operators",
+      "labelAr": "وكالات سفر وسياحة",
+      "tier": "HIGH",
+      "category": "travel",
+      "keywords": [
+        "travel",
+        "tours",
+        "tourism",
+        "holiday package",
+        "umrah",
+        "visa",
+        "tickets"
+      ]
+    },
+    {
+      "mcc": "7011",
+      "labelEn": "Hotels and holiday homes",
+      "labelAr": "فنادق وشقق فندقية",
+      "tier": "MEDIUM",
+      "category": "travel",
+      "keywords": [
+        "hotel",
+        "holiday home",
+        "short term rental",
+        "airbnb",
+        "hostel"
+      ]
+    },
+    {
+      "mcc": "4511",
+      "labelEn": "Airlines",
+      "labelAr": "طيران",
+      "tier": "RESTRICTED",
+      "category": "travel",
+      "keywords": [
+        "airline",
+        "air tickets"
+      ]
+    },
+    {
+      "mcc": "4121",
+      "labelEn": "Taxi and ride services",
+      "labelAr": "تاكسي وتوصيل ركاب",
+      "tier": "MEDIUM",
+      "category": "travel",
+      "keywords": [
+        "taxi",
+        "limousine",
+        "chauffeur",
+        "ride"
+      ]
+    },
+    {
+      "mcc": "7512",
+      "labelEn": "Car rental",
+      "labelAr": "تأجير سيارات",
+      "tier": "HIGH",
+      "category": "travel",
+      "keywords": [
+        "car rental",
+        "rent a car"
+      ]
+    },
+    {
+      "mcc": "4411",
+      "labelEn": "Cruise and yacht charters",
+      "labelAr": "رحلات بحرية ويخوت",
+      "tier": "HIGH",
+      "category": "travel",
+      "keywords": [
+        "yacht",
+        "boat",
+        "cruise",
+        "charter"
+      ]
+    },
+    {
+      "mcc": "5511",
+      "labelEn": "Car dealers",
+      "labelAr": "وكلاء سيارات",
+      "tier": "HIGH",
+      "category": "retail",
+      "keywords": [
+        "car dealer",
+        "used cars",
+        "car sales"
+      ]
+    },
+    {
+      "mcc": "5533",
+      "labelEn": "Auto parts",
+      "labelAr": "قطع غيار سيارات",
+      "tier": "LOW",
+      "category": "retail",
+      "keywords": [
+        "spare parts",
+        "auto parts",
+        "tyres"
+      ]
+    },
+    {
+      "mcc": "7538",
+      "labelEn": "Car service and repair",
+      "labelAr": "صيانة سيارات",
+      "tier": "LOW",
+      "category": "professional_services",
+      "keywords": [
+        "car service",
+        "garage",
+        "car repair",
+        "detailing"
+      ]
+    },
+    {
+      "mcc": "8099",
+      "labelEn": "Medical and health services",
+      "labelAr": "خدمات طبية وصحية",
+      "tier": "MEDIUM",
+      "category": "health",
+      "keywords": [
+        "clinic",
+        "medical",
+        "aesthetic",
+        "physio",
+        "wellness"
+      ]
+    },
+    {
+      "mcc": "8011",
+      "labelEn": "Doctors",
+      "labelAr": "أطباء",
+      "tier": "LOW",
+      "category": "health",
+      "keywords": [
+        "doctor",
+        "physician"
+      ]
+    },
+    {
+      "mcc": "8021",
+      "labelEn": "Dentists",
+      "labelAr": "أطباء أسنان",
+      "tier": "LOW",
+      "category": "health",
+      "keywords": [
+        "dental",
+        "dentist"
+      ]
+    },
+    {
+      "mcc": "8043",
+      "labelEn": "Opticians",
+      "labelAr": "بصريات",
+      "tier": "LOW",
+      "category": "health",
+      "keywords": [
+        "optician",
+        "eyewear",
+        "glasses"
+      ]
+    },
+    {
+      "mcc": "7297",
+      "labelEn": "Massage parlours",
+      "labelAr": "مراكز تدليك",
+      "tier": "RESTRICTED",
+      "category": "health",
+      "keywords": [
+        "massage"
+      ]
+    },
+    {
+      "mcc": "5912",
+      "labelEn": "Pharmacies",
+      "labelAr": "صيدليات",
+      "tier": "MEDIUM",
+      "category": "health",
+      "keywords": [
+        "pharmacy"
+      ]
+    },
+    {
+      "mcc": "5122",
+      "labelEn": "Drugs and supplements",
+      "labelAr": "أدوية ومكملات",
+      "tier": "RESTRICTED",
+      "category": "health",
+      "keywords": [
+        "supplements",
+        "vitamins",
+        "nutraceutical",
+        "peptide",
+        "protein"
+      ]
+    },
+    {
+      "mcc": "7372",
+      "labelEn": "Software and SaaS",
+      "labelAr": "برمجيات وخدمات سحابية",
+      "tier": "MEDIUM",
+      "category": "software",
+      "keywords": [
+        "saas",
+        "software",
+        "platform",
+        "app subscription",
+        "startup"
+      ]
+    },
+    {
+      "mcc": "7379",
+      "labelEn": "IT services",
+      "labelAr": "خدمات تقنية",
+      "tier": "LOW",
+      "category": "software",
+      "keywords": [
+        "it services",
+        "web development",
+        "app development",
+        "managed services"
+      ]
+    },
+    {
+      "mcc": "5817",
+      "labelEn": "Digital goods apps and software",
+      "labelAr": "سلع رقمية تطبيقات",
+      "tier": "MEDIUM",
+      "category": "software",
+      "keywords": [
+        "digital goods",
+        "downloads",
+        "app"
+      ]
+    },
+    {
+      "mcc": "5815",
+      "labelEn": "Digital media",
+      "labelAr": "وسائط رقمية",
+      "tier": "MEDIUM",
+      "category": "software",
+      "keywords": [
+        "ebooks",
+        "music",
+        "video streaming",
+        "online content"
+      ]
+    },
+    {
+      "mcc": "5816",
+      "labelEn": "Digital games",
+      "labelAr": "ألعاب رقمية",
+      "tier": "HIGH",
+      "category": "software",
+      "keywords": [
+        "game",
+        "gaming",
+        "top up",
+        "in-game",
+        "skins"
+      ]
+    },
+    {
+      "mcc": "4816",
+      "labelEn": "Web hosting and online services",
+      "labelAr": "استضافة وخدمات إنترنت",
+      "tier": "MEDIUM",
+      "category": "software",
+      "keywords": [
+        "hosting",
+        "domain",
+        "cloud"
+      ]
+    },
+    {
+      "mcc": "4814",
+      "labelEn": "Telecom services and top ups",
+      "labelAr": "خدمات اتصالات وشحن رصيد",
+      "tier": "HIGH",
+      "category": "software",
+      "keywords": [
+        "recharge",
+        "telecom",
+        "prepaid",
+        "sim"
+      ]
+    },
+    {
+      "mcc": "4900",
+      "labelEn": "Utilities",
+      "labelAr": "مرافق",
+      "tier": "LOW",
+      "category": "other",
+      "keywords": [
+        "utility",
+        "electricity",
+        "water"
+      ]
+    },
+    {
+      "mcc": "6300",
+      "labelEn": "Insurance",
+      "labelAr": "تأمين",
+      "tier": "MEDIUM",
+      "category": "other",
+      "keywords": [
+        "insurance",
+        "broker",
+        "takaful"
+      ]
+    },
+    {
+      "mcc": "6513",
+      "labelEn": "Real estate agents and rentals",
+      "labelAr": "عقارات وإيجارات",
+      "tier": "HIGH",
+      "category": "other",
+      "keywords": [
+        "real estate",
+        "property",
+        "rent",
+        "broker",
+        "landlord"
+      ]
+    },
+    {
+      "mcc": "5966",
+      "labelEn": "Outbound telemarketing",
+      "labelAr": "تسويق هاتفي",
+      "tier": "RESTRICTED",
+      "category": "other",
+      "keywords": [
+        "telemarketing",
+        "call center sales"
+      ]
+    },
+    {
+      "mcc": "5967",
+      "labelEn": "Subscriptions with trials",
+      "labelAr": "اشتراكات مع فترات تجريبية",
+      "tier": "HIGH",
+      "category": "other",
+      "keywords": [
+        "free trial",
+        "trial",
+        "continuity"
+      ]
+    },
+    {
+      "mcc": "5968",
+      "labelEn": "Subscription merchants",
+      "labelAr": "اشتراكات مستمرة",
+      "tier": "MEDIUM",
+      "category": "other",
+      "keywords": [
+        "subscription",
+        "membership",
+        "monthly plan"
+      ]
+    },
+    {
+      "mcc": "5993",
+      "labelEn": "Tobacco and vape",
+      "labelAr": "تبغ وسجائر إلكترونية",
+      "tier": "RESTRICTED",
+      "category": "retail",
+      "keywords": [
+        "vape",
+        "tobacco",
+        "cigarette",
+        "shisha"
+      ]
+    },
+    {
+      "mcc": "5921",
+      "labelEn": "Alcohol",
+      "labelAr": "كحول",
+      "tier": "RESTRICTED",
+      "category": "retail",
+      "keywords": [
+        "alcohol",
+        "liquor",
+        "wine"
+      ]
+    },
+    {
+      "mcc": "7995",
+      "labelEn": "Gambling and betting",
+      "labelAr": "قمار ومراهنات",
+      "tier": "PROHIBITED",
+      "category": "other",
+      "keywords": [
+        "betting",
+        "casino",
+        "gambling",
+        "lottery",
+        "poker"
+      ]
+    },
+    {
+      "mcc": "6051",
+      "labelEn": "Crypto forex quasi cash",
+      "labelAr": "عملات رقمية وفوركس",
+      "tier": "PROHIBITED",
+      "category": "other",
+      "keywords": [
+        "crypto",
+        "bitcoin",
+        "forex",
+        "fx trading",
+        "exchange",
+        "otc"
+      ]
+    },
+    {
+      "mcc": "6211",
+      "labelEn": "Securities and investments",
+      "labelAr": "أوراق مالية واستثمار",
+      "tier": "RESTRICTED",
+      "category": "other",
+      "keywords": [
+        "investment",
+        "securities",
+        "fund",
+        "wealth",
+        "trading platform"
+      ]
+    },
+    {
+      "mcc": "6540",
+      "labelEn": "Stored value and wallet top up",
+      "labelAr": "شحن محافظ",
+      "tier": "RESTRICTED",
+      "category": "other",
+      "keywords": [
+        "wallet",
+        "stored value",
+        "prepaid card",
+        "top-up"
+      ]
+    },
+    {
+      "mcc": "7273",
+      "labelEn": "Dating services",
+      "labelAr": "خدمات مواعدة",
+      "tier": "PROHIBITED",
+      "category": "other",
+      "keywords": [
+        "dating",
+        "matchmaking"
+      ]
+    },
+    {
+      "mcc": "8398",
+      "labelEn": "Charities and donations",
+      "labelAr": "جمعيات خيرية وتبرعات",
+      "tier": "RESTRICTED",
+      "category": "other",
+      "keywords": [
+        "charity",
+        "donation",
+        "fundraising",
+        "zakat",
+        "ngo"
+      ]
+    },
+    {
+      "mcc": "8651",
+      "labelEn": "Political organisations",
+      "labelAr": "منظمات سياسية",
+      "tier": "PROHIBITED",
+      "category": "other",
+      "keywords": [
+        "political"
+      ]
+    },
+    {
+      "mcc": "5976",
+      "labelEn": "Medical devices",
+      "labelAr": "أجهزة طبية",
+      "tier": "MEDIUM",
+      "category": "health",
+      "keywords": [
+        "medical devices",
+        "orthopaedic",
+        "hearing aid"
+      ]
+    },
+    {
+      "mcc": "5199",
+      "labelEn": "Non durable goods wholesale",
+      "labelAr": "سلع غير معمرة جملة",
+      "tier": "MEDIUM",
+      "category": "retail",
+      "keywords": [
+        "wholesale",
+        "trading",
+        "import export",
+        "fmcg"
+      ]
+    },
+    {
+      "mcc": "5099",
+      "labelEn": "Durable goods wholesale",
+      "labelAr": "سلع معمرة جملة",
+      "tier": "MEDIUM",
+      "category": "retail",
+      "keywords": [
+        "machinery",
+        "equipment wholesale",
+        "industrial"
+      ]
+    },
+    {
+      "mcc": "4214",
+      "labelEn": "Freight and logistics",
+      "labelAr": "شحن ولوجستيات",
+      "tier": "MEDIUM",
+      "category": "other",
+      "keywords": [
+        "logistics",
+        "freight",
+        "cargo",
+        "shipping",
+        "moving"
+      ]
+    },
+    {
+      "mcc": "4215",
+      "labelEn": "Courier services",
+      "labelAr": "خدمات توصيل",
+      "tier": "MEDIUM",
+      "category": "other",
+      "keywords": [
+        "courier",
+        "last mile",
+        "parcel"
+      ]
+    },
+    {
+      "mcc": "7210",
+      "labelEn": "Laundry",
+      "labelAr": "مغاسل",
+      "tier": "LOW",
+      "category": "other",
+      "keywords": [
+        "laundry",
+        "dry clean"
+      ]
+    },
+    {
+      "mcc": "7299",
+      "labelEn": "Personal services other",
+      "labelAr": "خدمات شخصية أخرى",
+      "tier": "MEDIUM",
+      "category": "other",
+      "keywords": [
+        "personal services",
+        "concierge",
+        "tailor"
+      ]
+    },
+    {
+      "mcc": "7991",
+      "labelEn": "Tourist attractions",
+      "labelAr": "مناطق جذب سياحي",
+      "tier": "MEDIUM",
+      "category": "travel",
+      "keywords": [
+        "attraction",
+        "desert safari",
+        "experience",
+        "activities"
+      ]
+    },
+    {
+      "mcc": "7997",
+      "labelEn": "Gyms and clubs",
+      "labelAr": "نوادي رياضية",
+      "tier": "MEDIUM",
+      "category": "health",
+      "keywords": [
+        "gym",
+        "fitness",
+        "club",
+        "yoga",
+        "pilates",
+        "crossfit"
+      ]
+    },
+    {
+      "mcc": "7999",
+      "labelEn": "Recreation services",
+      "labelAr": "خدمات ترفيهية",
+      "tier": "MEDIUM",
+      "category": "other",
+      "keywords": [
+        "recreation",
+        "entertainment",
+        "kids play",
+        "escape room"
+      ]
+    },
+    {
+      "mcc": "7922",
+      "labelEn": "Ticketing and events",
+      "labelAr": "تذاكر وفعاليات",
+      "tier": "HIGH",
+      "category": "other",
+      "keywords": [
+        "events",
+        "tickets",
+        "concert",
+        "conference",
+        "exhibition",
+        "wedding planner"
+      ]
+    },
+    {
+      "mcc": "7832",
+      "labelEn": "Cinemas",
+      "labelAr": "سينما",
+      "tier": "LOW",
+      "category": "other",
+      "keywords": [
+        "cinema"
+      ]
+    }
+  ],
+  "categoryDefaultMcc": {
+    "retail": "5999",
+    "food": "5812",
+    "fashion_beauty": "5651",
+    "electronics": "5732",
+    "professional_services": "7399",
+    "education": "8299",
+    "travel": "4722",
+    "health": "8099",
+    "software": "7372",
+    "other": "7399"
+  },
+  "activityFlagRules": {
+    "travel_ticketing": {
+      "floorTier": "HIGH",
+      "extraDocuments": [
+        "processing_statement"
+      ]
+    },
+    "electronics_luxury": {
+      "floorTier": "HIGH",
+      "extraDocuments": []
+    },
+    "forex_crypto": {
+      "setTier": "RESTRICTED",
+      "extraDocuments": []
+    },
+    "gaming_betting": {
+      "setTier": "PROHIBITED",
+      "extraDocuments": []
+    },
+    "pharma_supplements": {
+      "setTier": "RESTRICTED",
+      "extraDocuments": []
+    },
+    "adult": {
+      "setTier": "PROHIBITED",
+      "extraDocuments": []
+    },
+    "charity": {
+      "setTier": "RESTRICTED",
+      "extraDocuments": []
+    },
+    "telemarketing_trials": {
+      "floorTier": "HIGH",
+      "extraDocuments": [
+        "processing_statement"
+      ]
+    }
+  },
+  "highRiskExtraDocuments": [
+    "bank_statement"
+  ],
+  "prescreen": {
+    "likelyAtOrAbove": 70,
+    "reviewAtOrAbove": 45,
+    "extraWeights": {
+      "restrictedUplift": 15,
+      "noWebPresence": 10,
+      "activityFlag": 10,
+      "activityFlagCap": 20
+    },
+    "reviewSlaEn": {
+      "LIKELY": "1 to 2 working days",
+      "REVIEW": "3 to 5 working days",
+      "UNLIKELY": "up to 5 working days"
+    },
+    "reviewSlaAr": {
+      "LIKELY": "يوم إلى يومي عمل",
+      "REVIEW": "3 إلى 5 أيام عمل",
+      "UNLIKELY": "حتى 5 أيام عمل"
+    }
+  },
+  "pricing": {
+    "showExactForLikely": true,
+    "reviewRangeUpliftPct": 0.75,
+    "cnp": {
+      "LOW": {
+        "V1": {
+          "mdrPct": 2.5,
+          "fixedFeeAed": 1
+        },
+        "V2": {
+          "mdrPct": 2.35,
+          "fixedFeeAed": 1
+        },
+        "V3": {
+          "mdrPct": 2.2,
+          "fixedFeeAed": 1
+        },
+        "V4": {
+          "mdrPct": 2,
+          "fixedFeeAed": 1
+        },
+        "V5": null
+      },
+      "MEDIUM": {
+        "V1": {
+          "mdrPct": 2.75,
+          "fixedFeeAed": 1
+        },
+        "V2": {
+          "mdrPct": 2.6,
+          "fixedFeeAed": 1
+        },
+        "V3": {
+          "mdrPct": 2.45,
+          "fixedFeeAed": 1
+        },
+        "V4": {
+          "mdrPct": 2.25,
+          "fixedFeeAed": 1
+        },
+        "V5": null
+      },
+      "HIGH": {
+        "V1": {
+          "mdrPct": 3.5,
+          "fixedFeeAed": 1.5
+        },
+        "V2": {
+          "mdrPct": 3.3,
+          "fixedFeeAed": 1.5
+        },
+        "V3": {
+          "mdrPct": 3.1,
+          "fixedFeeAed": 1.5
+        },
+        "V4": {
+          "mdrPct": 2.9,
+          "fixedFeeAed": 1.5
+        },
+        "V5": null
+      },
+      "RESTRICTED": {
+        "V1": {
+          "mdrPct": 3.5,
+          "fixedFeeAed": 1.5
+        },
+        "V2": {
+          "mdrPct": 3.5,
+          "fixedFeeAed": 1.5
+        },
+        "V3": {
+          "mdrPct": 3.5,
+          "fixedFeeAed": 1.5
+        },
+        "V4": {
+          "mdrPct": 3.5,
+          "fixedFeeAed": 1.5
+        },
+        "V5": null
+      }
+    },
+    "cp": {
+      "LOW": {
+        "V1": {
+          "mdrPct": 1.75,
+          "fixedFeeAed": 0.5
+        },
+        "V2": {
+          "mdrPct": 1.65,
+          "fixedFeeAed": 0.5
+        },
+        "V3": {
+          "mdrPct": 1.55,
+          "fixedFeeAed": 0.5
+        },
+        "V4": {
+          "mdrPct": 1.45,
+          "fixedFeeAed": 0.5
+        },
+        "V5": null
+      },
+      "MEDIUM": {
+        "V1": {
+          "mdrPct": 1.95,
+          "fixedFeeAed": 0.5
+        },
+        "V2": {
+          "mdrPct": 1.85,
+          "fixedFeeAed": 0.5
+        },
+        "V3": {
+          "mdrPct": 1.75,
+          "fixedFeeAed": 0.5
+        },
+        "V4": {
+          "mdrPct": 1.65,
+          "fixedFeeAed": 0.5
+        },
+        "V5": null
+      },
+      "HIGH": {
+        "V1": {
+          "mdrPct": 2.5,
+          "fixedFeeAed": 0.75
+        },
+        "V2": {
+          "mdrPct": 2.4,
+          "fixedFeeAed": 0.75
+        },
+        "V3": {
+          "mdrPct": 2.3,
+          "fixedFeeAed": 0.75
+        },
+        "V4": {
+          "mdrPct": 2.2,
+          "fixedFeeAed": 0.75
+        },
+        "V5": null
+      },
+      "RESTRICTED": {
+        "V1": {
+          "mdrPct": 2.5,
+          "fixedFeeAed": 0.75
+        },
+        "V2": {
+          "mdrPct": 2.5,
+          "fixedFeeAed": 0.75
+        },
+        "V3": {
+          "mdrPct": 2.5,
+          "fixedFeeAed": 0.75
+        },
+        "V4": {
+          "mdrPct": 2.5,
+          "fixedFeeAed": 0.75
+        },
+        "V5": null
+      }
+    },
+    "components": {
+      "LOW": {
+        "settlement": "T+1",
+        "setupFeeAed": 0,
+        "reserve": null,
+        "internationalUpliftPct": 0.75,
+        "recurringUpliftPct": 0
+      },
+      "MEDIUM": {
+        "settlement": "T+2",
+        "setupFeeAed": 0,
+        "reserve": null,
+        "internationalUpliftPct": 0.75,
+        "recurringUpliftPct": 0
+      },
+      "HIGH": {
+        "settlement": "T+3",
+        "setupFeeAed": 500,
+        "reserve": {
+          "pct": 5,
+          "days": 90
+        },
+        "internationalUpliftPct": 1,
+        "recurringUpliftPct": 0.25
+      },
+      "RESTRICTED": {
+        "settlement": "T+7",
+        "setupFeeAed": 1000,
+        "reserve": {
+          "pct": 10,
+          "days": 180
+        },
+        "internationalUpliftPct": 1,
+        "recurringUpliftPct": 0.25
+      }
+    }
+  },
+  "session": {
+    "nudgeAfterMinutes": 120,
+    "templateNudgeAfterHours": 48,
+    "expireAfterDays": 30
+  }
+}

@@ -9,7 +9,7 @@ import { UaePassPanel } from '../uaepass/OpsPanel';
 import { Empty, Meter, MockBanner, Modal, RiskChip, StatusPill, toast } from '../components/ui';
 import { DOC_LABELS, ENTITY_LABELS, FIELD_LABELS, SECTIONS, fmt, type Case, type CaseField, type CaseResponse, type Person, type Trace } from '../types';
 
-type Tab = 'fields' | 'ownership' | 'risk' | 'output' | 'gaps' | 'uaepass';
+type Tab = 'fields' | 'ownership' | 'risk' | 'output' | 'gaps' | 'uaepass' | 'bot';
 
 export function CaseWorkspace() {
   const { id = '' } = useParams();
@@ -115,7 +115,7 @@ export function CaseWorkspace() {
         {/* centre */}
         <div className="col">
           <div className="tabs" role="tablist">
-            {([['fields', 'Fields'], ['ownership', 'Ownership'], ['risk', 'Risk and decision'], ['output', 'Output'], ['gaps', `Gaps${c.gaps?.items.length ? ` (${c.gaps.items.length})` : ''}`], ['uaepass', 'UAE PASS']] as [Tab, string][]).map(([k, l]) => (
+            {([['fields', 'Fields'], ['ownership', 'Ownership'], ['risk', 'Risk and decision'], ['output', 'Output'], ['gaps', `Gaps${c.gaps?.items.length ? ` (${c.gaps.items.length})` : ''}`], ['uaepass', 'UAE PASS'], ...(c.botIntake ? [['bot', `Bot intake (${c.botIntake.channel})`]] : [])] as [Tab, string][]).map(([k, l]) => (
               <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>
             ))}
           </div>
@@ -125,6 +125,7 @@ export function CaseWorkspace() {
           {tab === 'output' && <OutputPanel c={c} webhooks={data.webhooks} onChanged={refresh} />}
           {tab === 'gaps' && <Gaps c={c} />}
           {tab === 'uaepass' && <UaePassPanel c={c} onChanged={refresh} />}
+          {tab === 'bot' && c.botIntake && <BotIntakePanel c={c} />}
         </div>
 
         {/* right: timeline */}
@@ -302,6 +303,7 @@ function Ownership({ c }: { c: Case }) {
 function RiskPanel({ c, onChanged }: { c: Case; onChanged: () => void }) {
   const me = useMe();
   const [notes, setNotes] = useState('');
+  const [merchantMessage, setMerchantMessage] = useState('');
   const [busy, setBusy] = useState(false);
   if (!c.risk) return <Empty title="No risk assessment yet">The underwriter agent scores the case after screening.</Empty>;
   const r = c.risk;
@@ -310,7 +312,7 @@ function RiskPanel({ c, onChanged }: { c: Case; onChanged: () => void }) {
   const decide = async (decision: 'approve' | 'reject' | 'request_info') => {
     setBusy(true);
     try {
-      const out = await api.post<{ status: string; awaitingSecondReviewer: boolean }>(`/cases/${c.id}/review`, { decision, notes });
+      const out = await api.post<{ status: string; awaitingSecondReviewer: boolean }>(`/cases/${c.id}/review`, { decision, notes, ...(c.botIntake && merchantMessage.trim() ? { merchantMessage: merchantMessage.trim() } : {}) });
       toast(out.awaitingSecondReviewer ? 'First approval recorded. A second reviewer must approve.' : `Case is now ${out.status.replace(/_/g, ' ').toLowerCase()}`);
       setNotes('');
       onChanged();
@@ -360,7 +362,14 @@ function RiskPanel({ c, onChanged }: { c: Case; onChanged: () => void }) {
         {c.needsReviewFields.length > 0 && c.status === 'AWAITING_REVIEW' && <div className="banner warn" style={{ marginTop: 10 }}>Confirm or correct {c.needsReviewFields.length} low-confidence field(s) on the Fields tab before approving.</div>}
         {can.review(me) && c.status === 'AWAITING_REVIEW' ? (
           <div className="stack" style={{ marginTop: 12 }}>
-            <div className="field"><label htmlFor="notes">Notes (mandatory)</label><textarea id="notes" className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What you checked and why" /></div>
+            <div className="field"><label htmlFor="notes">Notes (mandatory, internal)</label><textarea id="notes" className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What you checked and why" /></div>
+            {c.botIntake && (
+              <div className="field">
+                <label htmlFor="merchantMessage">Message to the merchant on {c.botIntake.channel} (optional)</label>
+                <textarea id="merchantMessage" className="textarea" value={merchantMessage} onChange={(e) => setMerchantMessage(e.target.value)} placeholder={c.gaps?.draftMessage ? 'Leave empty to send the gap-chaser draft on Request info. For Reject, a short merchant-safe reason.' : 'Request info: what you need from them. Reject: a short merchant-safe reason. Approve: nothing needed.'} />
+                <p className="tiny muted" style={{ margin: '4px 0 0' }}>Internal notes are never sent. Your decision is relayed to the merchant on {c.botIntake.channel} in {c.botIntake.lang === 'ar' ? 'Arabic' : 'English'}.</p>
+              </div>
+            )}
             <div className="row">
               <button className="btn btn-honey" disabled={busy || notes.trim().length < 5 || c.needsReviewFields.length > 0} onClick={() => decide('approve')}>Approve</button>
               <button className="btn" disabled={busy || notes.trim().length < 5} onClick={() => decide('request_info')}>Request info</button>
@@ -479,7 +488,7 @@ function Gaps({ c }: { c: Case }) {
         <textarea className="textarea" style={{ marginTop: 10, minHeight: 200, background: '#fff' }} defaultValue={c.gaps?.draftMessage} aria-label="Draft message" />
         <div className="row" style={{ marginTop: 10 }}>
           <button className="btn btn-dark btn-sm" onClick={async () => { await navigator.clipboard.writeText(c.gaps?.draftMessage ?? ''); toast('Copied. Paste it into your email and send it yourself.'); }}>Copy draft</button>
-          <span className="small muted">MoneyBee never sends this automatically. A human sends it.</span>
+          <span className="small muted">{c.botIntake ? `MoneyBee never sends this automatically. Choose Request info on the Risk and decision tab to send it to the merchant on ${c.botIntake.channel}.` : 'MoneyBee never sends this automatically. A human sends it.'}</span>
         </div>
       </div>
     </div>
@@ -501,6 +510,65 @@ function Findings({ c, onDoc }: { c: Case; onDoc: (id: string) => void }) {
           {f.docIds?.[0] && <button className="linkbtn" onClick={() => onDoc(f.docIds![0])}>open document</button>}
         </div>
       ))}
+    </div>
+  );
+}
+
+const BAND_TONE: Record<string, string> = { LIKELY: 'ok', REVIEW: 'warn', UNLIKELY: 'bad' };
+const LBL: Record<string, string> = {
+  contactName: 'Contact', companyName: 'Company (as typed)', entityChoice: 'Entity (chosen)', entityType: 'Entity (mapped)', emirate: 'Emirate', freeZone: 'Free zone', description: 'What they sell', category: 'Category', channel: 'Sales channel',
+  customerType: 'Customers', billing: 'Billing', customerLocation: 'Customer location', volumeBand: 'Monthly volume band', ticketBand: 'Ticket band', currentGateway: 'Current gateway', switchReason: 'Why switching', yearsBand: 'Years operating', web: 'Website / social', noWebPresence: 'No web presence', activityFlags: 'Activity flags', consentAt: 'Consent at',
+};
+function BotIntakePanel({ c }: { c: Case }) {
+  const b = c.botIntake!;
+  const a = b.answers;
+  const rows = Object.keys(LBL).filter((k) => a[k] !== undefined && a[k] !== '' && !(Array.isArray(a[k]) && (a[k] as unknown[]).length === 0));
+  const rate = (x: { mdrPct: number; fixedFeeAed: number } | null, label: string) => x ? <div className="row between small" style={{ padding: '4px 0', borderBottom: '1px solid var(--hairline)' }}><span>{label}</span><span className="mono">{b.pricing?.rangeUpliftPct != null ? `${x.mdrPct.toFixed(2)} to ${(x.mdrPct + b.pricing.rangeUpliftPct).toFixed(2)}%` : `${x.mdrPct.toFixed(2)}%`} + AED {x.fixedFeeAed.toFixed(2)}</span></div> : null;
+  return (
+    <div className="stack">
+      <div className="card card-dark">
+        <div className="row between">
+          <div><p className="eyebrow">Pre-approval (bot, not shown to the merchant as a number)</p>
+            <div className="row" style={{ alignItems: 'baseline' }}><span className="mono" style={{ fontSize: 46, letterSpacing: '-0.03em' }}>{b.prescreen?.score ?? '-'}</span><span className="muted">/ 100</span>{b.prescreen && <span className={`pill ${BAND_TONE[b.prescreen.band]}`}>{b.prescreen.band.toLowerCase()}</span>}</div></div>
+          <div className="small" style={{ textAlign: 'right' }}><div>{b.channel} · {b.lang === 'ar' ? 'Arabic' : 'English'}</div><div className="muted">{b.submittedAt ? `submitted ${new Date(b.submittedAt).toLocaleString()}` : 'not submitted'}</div>{b.flags.extraReview && <span className="pill honey" style={{ marginTop: 6 }}>extra review: {b.flags.extraReviewReason}</span>}</div>
+        </div>
+        <div style={{ marginTop: 14 }}>{b.prescreen?.signals.map((s) => <div key={s.code} className="row between small" style={{ padding: '4px 0', borderBottom: '1px solid rgba(246,241,230,.1)' }}><span>{s.note}</span><span className="mono">-{s.points}</span></div>)}</div>
+      </div>
+      <div className="grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+        <div className="card">
+          <h3 className="h3">MCC (bot classifier)</h3>
+          {b.mcc ? (
+            <div className="small" style={{ marginTop: 8 }}>
+              <div><span className="mono">{b.mcc.primaryMcc}</span> {b.mcc.labelEn} <span className="pill">{b.mcc.tier.toLowerCase()}</span></div>
+              <div className="muted">confidence {(b.mcc.confidence * 100).toFixed(0)}% · {b.mcc.source} · {b.mcc.reason}</div>
+              {b.mcc.secondaryMccs.length > 0 && <div className="muted">also considered: {b.mcc.secondaryMccs.join(', ')}</div>}
+              <div className="tiny muted" style={{ marginTop: 6 }}>Written to the case as activity.mcc. Edit it on the Fields tab if wrong.</div>
+            </div>
+          ) : <p className="muted small">Not classified yet.</p>}
+        </div>
+        <div className="card">
+          <h3 className="h3">Indicative pricing offered</h3>
+          {b.pricing ? (
+            <div style={{ marginTop: 8 }}>
+              {b.pricing.custom ? <p className="small">Custom quote (volume band {b.pricing.volumeBand})</p> : <>{rate(b.pricing.cnp, 'Online (CNP)')}{rate(b.pricing.cp, 'In store (CP)')}</>}
+              <div className="row between small" style={{ padding: '4px 0', borderBottom: '1px solid var(--hairline)' }}><span>Settlement</span><span className="mono">{b.pricing.settlement}</span></div>
+              <div className="row between small" style={{ padding: '4px 0', borderBottom: '1px solid var(--hairline)' }}><span>Setup fee</span><span className="mono">{b.pricing.setupFeeAed ? `AED ${b.pricing.setupFeeAed}` : 'waived'}</span></div>
+              {b.pricing.reserve && <div className="row between small" style={{ padding: '4px 0' }}><span>Rolling reserve</span><span className="mono">{b.pricing.reserve.pct}% / {b.pricing.reserve.days}d</span></div>}
+              <p className="tiny muted" style={{ margin: '6px 0 0' }}>Told to the merchant as indicative and subject to underwriting. Tier {b.pricing.tier.toLowerCase()}, band {b.pricing.volumeBand}.</p>
+            </div>
+          ) : <p className="muted small">No pricing shown (prohibited activity or unlikely band).</p>}
+        </div>
+      </div>
+      <div className="card">
+        <h3 className="h3">Answers</h3>
+        <table className="table" style={{ marginTop: 8 }}><tbody>{rows.map((k) => <tr key={k}><td className="muted small" style={{ width: 200 }}>{LBL[k]}</td><td className="small">{Array.isArray(a[k]) ? (a[k] as string[]).join(', ') : String(a[k])}</td></tr>)}</tbody></table>
+      </div>
+      <div className="card card-paper">
+        <p className="eyebrow">Conversation (PII redacted)</p>
+        <div style={{ maxHeight: 420, overflow: 'auto', marginTop: 8 }}>
+          {b.transcript.map((m, i) => <div key={i} className="small" style={{ padding: '5px 0', borderBottom: '1px solid var(--hairline)', display: 'flex', gap: 10 }}><span className="mono tiny muted" style={{ minWidth: 120 }}>{new Date(m.at).toLocaleTimeString()} {m.from}</span><span style={{ whiteSpace: 'pre-wrap' }}>{m.text}</span></div>)}
+        </div>
+      </div>
     </div>
   );
 }

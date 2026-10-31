@@ -1,4 +1,4 @@
-import type { AuditRec, CaseListFilter, CaseRec, PolicySetRec, SettingsRec, Store, TraceRec, UserRec, WebhookDeliveryRec } from './types';
+import type { AuditRec, BotSessionRec, CaseListFilter, CaseRec, PolicySetRec, SettingsRec, Store, TraceRec, UserRec, WebhookDeliveryRec } from './types';
 
 const clone = <T>(v: T): T => structuredClone(v);
 
@@ -10,6 +10,7 @@ export function createMemoryStore(): Store {
   const users = new Map<string, UserRec>();
   const policies: PolicySetRec[] = [];
   let settings: SettingsRec = {};
+  const botSessions = new Map<string, BotSessionRec>();
   const hooks = new Map<string, WebhookDeliveryRec>();
   // Serialise updates per case so concurrent mutators do not interleave across awaits.
   const locks = new Map<string, Promise<unknown>>();
@@ -110,6 +111,22 @@ export function createMemoryStore(): Store {
       async get(version) {
         const p = policies.find((x) => x.version === version);
         return p ? clone(p) : null;
+      },
+    },
+    botSessions: {
+      async get(id) {
+        const s = botSessions.get(id);
+        return s ? clone(s) : null;
+      },
+      async put(s) {
+        botSessions.set(s.id, clone(s));
+      },
+      async list(f = {}) {
+        let all = [...botSessions.values()].map(clone);
+        if (f.step) all = all.filter((s) => s.step === f.step);
+        if (f.idleBefore) all = all.filter((s) => s.lastInboundAt < f.idleBefore!);
+        all.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+        return all.slice(0, f.limit ?? 200);
       },
     },
     settings: {
