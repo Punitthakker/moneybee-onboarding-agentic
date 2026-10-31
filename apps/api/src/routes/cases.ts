@@ -11,6 +11,8 @@ import type { CaseRec } from '../db/types';
 import { ingest, type IntakeInput } from '../agents/intake';
 import { transition } from '../agents/orchestrator';
 import { notifyDecision } from '../bot/notify';
+import { loadBotPolicy } from '../bot/policy';
+import { botStats } from '../bot/stats';
 import type { JobQueue } from '../queue';
 import { CompletionError, completeCase } from '../complete';
 import { audit, HttpError, parse, wrap } from './util';
@@ -88,6 +90,7 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
       avgTimeToPackSeconds: Math.round(avgMs / 1000),
       awaitingReview: all.filter((c) => c.status === 'AWAITING_REVIEW').length,
       total: all.length,
+      bot: await botStats(ctx, loadBotPolicy().session.expireAfterDays),
     });
   }));
 

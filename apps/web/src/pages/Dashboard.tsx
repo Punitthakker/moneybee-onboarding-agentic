@@ -7,7 +7,11 @@ import { Empty, Meter, RiskChip, StatusPill } from '../components/ui';
 import { ENTITY_LABELS, ago } from '../types';
 
 interface Row { id: string; ref: string; name: string; status: string; entityType: string; acquirerCode: string; risk: string | null; confidence: number | null; needsReview: number; owner: string; createdAt: string; run: string; docs: number }
-interface Stats { casesToday: number; autoCompletedFieldsPct: number; avgTimeToPackSeconds: number; awaitingReview: number; total: number }
+type Funnel = Record<'started' | 'consented' | 'profile_done' | 'docs_complete' | 'prescreened' | 'submitted' | 'approved' | 'rejected' | 'dropped', number>;
+interface BotStats { sessions: number; byChannel: Record<string, Funnel>; total: Funnel; medianSeconds: Record<string, { consented: number | null; profile_done: number | null; docs_complete: number | null; submitted: number | null }>; openByStep: Record<string, number>; prohibitedExits: number; holds: number }
+interface Stats { casesToday: number; autoCompletedFieldsPct: number; avgTimeToPackSeconds: number; awaitingReview: number; total: number; bot?: BotStats }
+const FUNNEL_LABELS: [keyof Funnel, string][] = [['started', 'Started'], ['consented', 'Consented'], ['profile_done', 'Profile done'], ['docs_complete', 'Docs complete'], ['submitted', 'Submitted'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['dropped', 'Dropped']];
+const mins = (s: number | null) => (s == null ? '-' : s < 90 ? `${s}s` : s < 5400 ? `${Math.round(s / 60)}m` : `${Math.round(s / 3600)}h`);
 
 const STATUS_FILTERS = ['', 'AWAITING_REVIEW', 'NEEDS_INFO', 'APPROVED', 'COMPLETED', 'REJECTED', 'RECEIVED'];
 
@@ -41,6 +45,16 @@ export function Dashboard() {
         <div className="kpi"><small>Avg time to pack</small><b>{s ? (t < 90 ? `${t}s` : `${Math.round(t / 60)}m`) : '-'}</b></div>
         <div className="kpi dark"><small>Awaiting review</small><b>{s?.awaitingReview ?? '-'}</b></div>
       </div>
+      {s?.bot && s.bot.sessions > 0 && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="row between"><h3 className="h3">Onboarding bot funnel</h3><span className="small muted">{s.bot.sessions} conversation(s) · {s.bot.holds} on hold · {s.bot.prohibitedExits} prohibited exits</span></div>
+          <table className="table" style={{ marginTop: 8 }}>
+            <thead><tr><th>Stage</th>{Object.keys(s.bot.byChannel).map((ch) => <th key={ch}>{ch}</th>)}<th>All</th></tr></thead>
+            <tbody>{FUNNEL_LABELS.map(([k, l]) => <tr key={k}><td className="small">{l}</td>{Object.keys(s.bot!.byChannel).map((ch) => <td key={ch} className="mono small">{s.bot!.byChannel[ch][k]}</td>)}<td className="mono small"><b>{s.bot!.total[k]}</b></td></tr>)}</tbody>
+          </table>
+          <p className="tiny muted" style={{ margin: '8px 0 0' }}>Median time to: {Object.entries(s.bot.medianSeconds).map(([ch, m]) => `${ch} - consent ${mins(m.consented)}, profile ${mins(m.profile_done)}, docs ${mins(m.docs_complete)}, submit ${mins(m.submitted)}`).join(' · ')}. Open now: {Object.entries(s.bot.openByStep).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}.</p>
+        </div>
+      )}
 
       <div className="card" style={{ padding: 18 }}>
         <div className="row" style={{ marginBottom: 12 }}>

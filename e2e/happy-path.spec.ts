@@ -22,7 +22,7 @@ test('drop documents, agents prepare, reviewer approves, token is minted and cla
 
   await expect(page.getByText('AWAITING REVIEW').first()).toBeVisible({ timeout: 90_000 });
   await page.getByRole('tab', { name: 'Risk and decision' }).click();
-  await page.getByLabel('Notes (mandatory)').fill('E2E: checked all policy checks');
+  await page.getByLabel('Notes (mandatory, internal)').fill('E2E: checked all policy checks');
   await page.getByRole('button', { name: 'Approve' }).click();
   await expect(page.getByText('APPROVED').first()).toBeVisible();
 

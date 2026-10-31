@@ -56,5 +56,7 @@ Decision taken: the adapter runs inside the API process (`apps/api/src/channels/
 
 Both adapters share `BotMachine`; a decision made in the back office reaches the merchant on whichever channel they used.
 
-## Next (Deliverable 6)
-Threat model update for chat channels, `/stats` funnel per stage and channel, Playwright e2e driving a fake WhatsApp conversation through the real stack.
+## Metrics, threat model, e2e (Deliverable 6)
+- `GET /api/v1/stats` now carries `bot`: funnel per channel (started, consented, profile done, docs complete, pre-screened, submitted, approved, rejected, dropped), median seconds to each milestone, open sessions by stage, holds and prohibited exits. Shown on the dashboard as "Onboarding bot funnel". Source: `apps/api/src/bot/stats.ts`.
+- `docs/THREAT_MODEL.md`: new "Chat channels" section (spoofed and replayed webhooks, injection via chat text and documents, media malware, session hijack, PII in transcripts and the LLM, leakage to the merchant, platform policy, resource exhaustion, service principal, simulator in prod).
+- `e2e/whatsapp-bot.spec.ts`: Playwright drives a merchant through the WhatsApp bot with signed Meta-shaped webhooks against the running stack (`WHATSAPP_MODE=mock`), then signs in and checks the dashboard funnel, the Bot intake tab, and that a Request info with a merchant message reaches the merchant without the internal note. Run: `E2E_PASSWORD=... npm run e2e`.
