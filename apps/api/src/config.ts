@@ -60,6 +60,8 @@ const EnvSchema = z.object({
 
   /** Where the merchant portal lives. Used for UAE PASS redirects. */
   PUBLIC_WEB_URL: z.string().default('http://localhost:5173'),
+  /** acquirer policy the onboarding bot files cases under; defaults to the first acquirer in /policies/acquirers */
+  BOT_ACQUIRER_CODE: z.string().optional(),
   /** mock: built-in simulator, no credentials. live: real UAE PASS (needs onboarding with the UAE PASS team). */
   UAEPASS_MODE: z.enum(['mock', 'live']).default('mock'),
   UAEPASS_SIGNING_ENABLED: bool(false),

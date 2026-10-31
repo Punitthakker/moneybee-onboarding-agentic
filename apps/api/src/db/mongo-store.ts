@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import type { AuditRec, CaseListFilter, CaseRec, PolicySetRec, SettingsRec, Store, TraceRec, UserRec, WebhookDeliveryRec } from './types';
+import type { AuditRec, BotSessionRec, CaseListFilter, CaseRec, PolicySetRec, SettingsRec, Store, TraceRec, UserRec, WebhookDeliveryRec } from './types';
 import { ConflictError } from './types';
 
 const loose = (name: string, indexes: Record<string, 1 | -1>[] = []) => {
@@ -38,6 +38,7 @@ export async function createMongoStore(url: string): Promise<Store> {
   const Policies = loose('policy_versions', [{ version: -1 }]);
   const Settings = loose('settings');
   const Hooks = loose('webhook_deliveries', [{ caseId: 1 }, { status: 1 }]);
+  const BotSessions = loose('bot_sessions', [{ step: 1 }, { lastInboundAt: 1 }, { updatedAt: -1 }]);
 
   const lean = <T>(q: unknown) => q as unknown as Promise<T>;
 
@@ -137,6 +138,21 @@ export async function createMongoStore(url: string): Promise<Store> {
         if (!r) return null;
         const { _id, ...rest } = r;
         return rest as unknown as PolicySetRec;
+      },
+    },
+    botSessions: {
+      async get(id) {
+        return fromDoc<BotSessionRec>(await lean<Record<string, unknown> | null>(BotSessions.findById(id).lean()));
+      },
+      async put(s) {
+        await BotSessions.replaceOne({ _id: s.id }, toDoc(s), { upsert: true });
+      },
+      async list(f = {}) {
+        const q: Record<string, unknown> = {};
+        if (f.step) q.step = f.step;
+        if (f.idleBefore) q.lastInboundAt = { $lt: f.idleBefore };
+        const rows = await lean<Record<string, unknown>[]>(BotSessions.find(q).sort({ updatedAt: -1 }).limit(f.limit ?? 200).lean());
+        return rows.map((r) => fromDoc<BotSessionRec>(r)!);
       },
     },
     settings: {

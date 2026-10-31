@@ -1,5 +1,14 @@
 import type {
   AcquirerConfig,
+  BotAnswers,
+  BotIntake,
+  BotChannel,
+  BotLang,
+  BotStep,
+  ChecklistState,
+  MccResult,
+  Prescreen,
+  PricingQuote,
   CaseField,
   CaseStatus,
   DocType,
@@ -195,6 +204,7 @@ export interface CaseRec {
   promptVersion?: string;
   run?: { seq: number; state: 'idle' | 'queued' | 'running' | 'failed' | 'done'; startedAt?: string; finishedAt?: string; error?: string };
   uaepass?: CaseUaePass;
+  botIntake?: BotIntake;
   completion?: {
     merchantId: string;
     sqlCaseId: string;
@@ -263,6 +273,35 @@ export interface SettingsRec {
   webhookSecretEnc?: string;
 }
 
+/** One merchant conversation on one channel. Keyed by a hash of channel + channel identity. */
+export interface BotSessionRec {
+  id: string;
+  channel: BotChannel;
+  /** channel identity (phone number / telegram id) encrypted with the PII cipher */
+  channelIdEnc: string;
+  /** last 4 digits for display */
+  channelIdMasked: string;
+  lang: BotLang;
+  step: BotStep;
+  prevStep?: BotStep;
+  answers: BotAnswers;
+  caseId?: string;
+  caseRef?: string;
+  mcc?: MccResult | null;
+  checklist?: ChecklistState | null;
+  prescreen?: Prescreen | null;
+  pricing?: PricingQuote | null;
+  extraReview?: { on: boolean; reason?: string };
+  transcript: { at: string; from: 'merchant' | 'bot' | 'system'; step: BotStep; text: string }[];
+  /** messages composed for events outside an inbound turn (underwriter decisions); adapters drain this */
+  outbox: { id: string; at: string; text: string; template?: { name: string; params: string[] }; sentAt?: string }[];
+  nudges: { twoHourSentAt?: string; templateSentAt?: string };
+  createdAt: string;
+  updatedAt: string;
+  lastInboundAt: string;
+  lastOutboundAt?: string;
+}
+
 export interface WebhookDeliveryRec {
   id: string;
   caseId: string;
@@ -322,6 +361,11 @@ export interface Store {
   settings: {
     get(): Promise<SettingsRec>;
     set(s: SettingsRec): Promise<void>;
+  };
+  botSessions: {
+    get(id: string): Promise<BotSessionRec | null>;
+    put(s: BotSessionRec): Promise<void>;
+    list(filter?: { step?: string; idleBefore?: string; limit?: number }): Promise<BotSessionRec[]>;
   };
   webhooks: {
     create(d: WebhookDeliveryRec): Promise<void>;

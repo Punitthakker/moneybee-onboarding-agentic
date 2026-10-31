@@ -77,6 +77,7 @@ export async function seedUsers(ctx: Ctx) {
     ctx.log.warn(`ADMIN_PASSWORD not set; generated one-time admin password for ${ctx.cfg.ADMIN_EMAIL}: ${adminPw}`);
   }
   await mk(ctx.cfg.ADMIN_EMAIL, 'Admin', 'ADMIN', adminPw);
+  await ensureBotUser(ctx);
   if (ctx.cfg.SEED_DEMO_DATA) {
     let demo = ctx.cfg.DEMO_PASSWORD;
     if (!demo) {
@@ -87,4 +88,12 @@ export async function seedUsers(ctx: Ctx) {
     await mk('second@moneybee.local', 'Demo Second Reviewer', 'SECOND_REVIEWER', demo);
     await mk('viewer@moneybee.local', 'Demo Viewer', 'VIEWER', demo);
   }
+}
+
+export const BOT_USER_EMAIL = 'bot@moneybee.local';
+/** Service principal the onboarding bot acts as. Inactive: it can never log in; it only owns bot-created cases and audit entries. */
+export async function ensureBotUser(ctx: Ctx): Promise<UserRec> {
+  const existing = await ctx.store.users.findByEmail(BOT_USER_EMAIL);
+  if (existing) return existing;
+  return ctx.store.users.create({ id: randomUUID(), email: BOT_USER_EMAIL, name: 'MoneyBee Onboarding Bot', role: 'UNDERWRITER', passwordHash: await bcrypt.hash(randomBytes(24).toString('hex'), 4), active: false, createdAt: new Date().toISOString() });
 }

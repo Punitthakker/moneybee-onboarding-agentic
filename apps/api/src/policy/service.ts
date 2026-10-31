@@ -3,7 +3,7 @@ import path from 'node:path';
 import { AcquirerConfigSchema, PolicySchema, effectivePolicy, type AcquirerConfig, type Policy } from '@moneybee/shared';
 import type { PolicySetRec, Store } from '../db/types';
 
-function findPoliciesDir(root: string): string {
+export function findPoliciesDir(root: string): string {
   const env = process.env.POLICIES_DIR;
   if (env) return env;
   for (const c of [path.resolve(root, 'policies'), path.resolve(root, '../../policies'), path.resolve(root, '../policies')]) {
