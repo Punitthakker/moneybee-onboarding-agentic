@@ -10,6 +10,7 @@ import { verifyFileUrl } from '../crypto/token';
 import type { CaseRec } from '../db/types';
 import { ingest, type IntakeInput } from '../agents/intake';
 import { transition } from '../agents/orchestrator';
+import { notifyDecision } from '../bot/notify';
 import type { JobQueue } from '../queue';
 import { CompletionError, completeCase } from '../complete';
 import { audit, HttpError, parse, wrap } from './util';
@@ -19,7 +20,12 @@ const CreateCase = z.object({
   entityType: z.union([EntityTypeSchema, z.literal('auto')]).default('auto'),
   acquirerCode: z.string().min(1),
 });
-const ReviewBody = z.object({ decision: z.enum(['approve', 'reject', 'request_info']), notes: z.string().trim().min(5, 'notes are mandatory (min 5 characters)').max(4000) });
+const ReviewBody = z.object({
+  decision: z.enum(['approve', 'reject', 'request_info']),
+  notes: z.string().trim().min(5, 'notes are mandatory (min 5 characters)').max(4000),
+  /** bot-intake cases only: the text the merchant receives (request_info: the edited gap-chaser draft; reject: a merchant-safe reason). Internal notes are never sent. */
+  merchantMessage: z.string().trim().max(2000).optional(),
+});
 const FieldPatch = z.object({
   path: z.string().min(1),
   value: z.unknown().optional(),
@@ -204,8 +210,23 @@ export function caseRoutes(ctx: Ctx, queue: JobQueue): Router {
         if (distinct >= (needsTwo ? 2 : 1)) transition(x, 'APPROVED', { type: 'human', id: me.id, email: me.email });
       }
     });
-    await audit(ctx, req, `review.${b.decision}`, `case:${c.id}`, { notes: b.notes, needsSecondReviewer: needsTwo });
+    await audit(ctx, req, `review.${b.decision}`, `case:${c.id}`, { notes: b.notes, needsSecondReviewer: needsTwo, merchantMessageSent: !!updated.botIntake });
     ctx.bus.emit(c.id, { type: 'status', status: updated.status });
+    // Bot-intake cases: the HUMAN decision is relayed to the merchant on their channel. Agents never reach this code path.
+    if (updated.botIntake) {
+      const ev =
+        b.decision === 'request_info'
+          ? ({ kind: 'needs_info', message: b.merchantMessage || updated.gaps?.draftMessage || (updated.botIntake.lang === 'ar' ? '- مستندات إضافية يطلبها فريق الاكتتاب' : '- Additional documents requested by our underwriting team') } as const)
+          : b.decision === 'reject'
+            ? ({ kind: 'rejected', merchantSafeReason: b.merchantMessage ?? '' } as const)
+            : updated.status === 'APPROVED'
+              ? ({ kind: 'approved' } as const)
+              : null;
+      if (ev) {
+        const sess = await notifyDecision(ctx, updated, ev);
+        if (sess && ctx.onBotOutbox) await ctx.onBotOutbox(sess.id).catch((e) => ctx.log.warn(`bot outbox drain failed: ${e instanceof Error ? e.message : e}`));
+      }
+    }
     res.json({ status: updated.status, awaitingSecondReviewer: needsTwo && updated.status === 'AWAITING_REVIEW' && updated.reviews.some((v) => v.decision === 'approve'), reviews: updated.reviews });
   }));
 

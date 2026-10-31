@@ -32,5 +32,18 @@ S0 language + consent -> S1 profile Q&A -> MCC (S2 restricted warning / prohibit
 ## Tests
 `apps/api/test/bot.test.ts`: policy load, keyword classifier, flag overrides, checklist per entity type and tier, pre-screen bands, pricing (exact vs range, uplifts, reserve), session helpers, and three conversations in mock mode: free zone merchant end to end (fixture 03) to AWAITING_REVIEW, prohibited exit with no case, restricted + Arabic + branch-of-foreign-company.
 
-## Next (Deliverable 4)
-WhatsApp Cloud API adapter (`apps/channels/whatsapp`), review-route hook calling `notifyDecision`, outbox drain, "Bot intake" panel in the back office, Meta setup runbook.
+## WhatsApp adapter (Deliverable 4)
+| path | what |
+|---|---|
+| `apps/api/src/channels/whatsapp/client.ts` | Meta Cloud API client (text, buttons, lists, templates, media download, mark read) and the in-memory mock. |
+| `apps/api/src/channels/whatsapp/adapter.ts` | webhook verify handshake, HMAC signature check, payload to `Inbound`, per-sender ordering, message-id dedupe, reply rendering (3 buttons or list), outbox drain with the 24h-window rule, nudge sweep. |
+| `apps/api/src/channels/whatsapp/index.ts` | builds the adapter from `WHATSAPP_MODE` (off / mock / live), sets `ctx.onBotOutbox`, starts the sweep timer. |
+| `apps/api/src/routes/cases.ts` (review) | after a human decision on a bot case: `notifyDecision()` then immediate outbox drain. `merchantMessage` body field carries the edited gap text or the merchant-safe rejection reason; internal notes are never sent. |
+| `apps/web/src/pages/CaseWorkspace.tsx` | **Bot intake** tab (pre-approval, MCC, pricing offered, answers, redacted transcript) and the "Message to the merchant" field on the decision form. |
+| `scripts/wa-sim.mjs` | terminal simulator for `WHATSAPP_MODE=mock` (`npm run wa:sim`). |
+| `docs/bot/05-whatsapp-runbook.md` | Meta setup, templates, operations. |
+
+Decision taken: the adapter runs inside the API process (`apps/api/src/channels/whatsapp`) rather than as a separate `apps/channels/whatsapp` service. It needs the store, cipher, LLM budget and queue, and a second process would have meant an internal HTTP API for all of that before there is a second channel. The module has no imports from the routes layer, so it can be lifted out later.
+
+## Next (Deliverable 5)
+Telegram Bot API adapter on the same `Inbound`/`Reply` contract.

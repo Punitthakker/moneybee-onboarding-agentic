@@ -68,11 +68,11 @@ describe('checklist', () => {
     const { ctx } = await makeTestApp();
     const { policy } = await ctx.policies.forAcquirer((await ctx.policies.acquirers())[0].code);
     const fz = buildChecklist(policy, bot, 'free_zone', 'LOW', baseAnswers());
-    expect(fz.required).toEqual(expect.arrayContaining(policy.entityTypes.free_zone.requiredDocuments));
+    expect(fz.required).toEqual(expect.arrayContaining(policy.entityTypes.free_zone!.requiredDocuments));
     expect(fz.required[0]).toBe('trade_licence');
     expect(fz.required).not.toContain('processing_statement');
     const sole = buildChecklist(policy, bot, 'sole_establishment', 'LOW', baseAnswers());
-    expect(sole.required).toHaveLength(policy.entityTypes.sole_establishment.requiredDocuments.length);
+    expect(sole.required).toHaveLength(policy.entityTypes.sole_establishment!.requiredDocuments.length);
     const hi = buildChecklist(policy, bot, 'llc', 'HIGH', baseAnswers({ currentGateway: 'telr', activityFlags: ['travel_ticketing'] }));
     expect(hi.required).toContain('bank_statement');
     expect(hi.required).toContain('processing_statement');
@@ -87,7 +87,7 @@ describe('prescreen and pricing', () => {
     const p = prescreen(policy, bot, baseAnswers(), mcc('LOW'), null, new Date());
     expect(p.band).toBe('LIKELY');
     const q = quote(bot, mcc('LOW'), baseAnswers(), p.band)!;
-    expect(q.cnp?.mdrPct).toBe(bot.pricing.cnp.LOW.V3.mdrPct);
+    expect(q.cnp?.mdrPct).toBe(bot.pricing.cnp.LOW!.V3.mdrPct);
     expect(q.cp).not.toBeNull();
     expect(q.rangeUpliftPct).toBeNull();
     expect(q.reserve).toBeNull();
@@ -112,7 +112,7 @@ describe('prescreen and pricing', () => {
   });
   it('international customers and subscriptions add the uplifts', () => {
     const q = quote(bot, mcc('MEDIUM'), baseAnswers({ customerLocation: 'international', billing: 'subscription', channel: 'online' }), 'LIKELY')!;
-    expect(q.cnp?.mdrPct).toBeCloseTo(bot.pricing.cnp.MEDIUM.V3.mdrPct + bot.pricing.components.MEDIUM.internationalUpliftPct + bot.pricing.components.MEDIUM.recurringUpliftPct, 2);
+    expect(q.cnp?.mdrPct).toBeCloseTo(bot.pricing.cnp.MEDIUM!.V3.mdrPct + bot.pricing.components.MEDIUM!.internationalUpliftPct + bot.pricing.components.MEDIUM!.recurringUpliftPct, 2);
     expect(q.cp).toBeNull();
   });
 });

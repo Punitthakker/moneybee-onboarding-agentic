@@ -259,14 +259,16 @@ export class BotMachine {
     const l = s.lang;
     const txt = textOf(inbound);
 
-    // language switch anywhere
-    if (/^(arabic|عربي|العربية)$/i.test(txt)) {
-      s.lang = 'ar';
-      return this.prompt(s);
-    }
-    if (/^english$/i.test(txt)) {
-      s.lang = 'en';
-      return this.prompt(s);
+    // language switch anywhere after the language step (typed, not a button)
+    if (s.step !== 'S0_LANG' && inbound.type === 'text') {
+      if (/^(arabic|عربي|العربية)$/i.test(txt)) {
+        s.lang = 'ar';
+        return this.prompt(s);
+      }
+      if (/^english$/i.test(txt)) {
+        s.lang = 'en';
+        return this.prompt(s);
+      }
     }
 
     // global commands (not in S0_LANG where anything starts the flow)
@@ -501,8 +503,16 @@ export class BotMachine {
       }
       case 'S5_SUBMITTED': {
         if (inbound.type === 'media') {
-          // documents sent after submission (needs_info loop): file them on the case, underwriter re-runs
+          // documents sent after submission (needs_info loop): file them, then re-run the pipeline so the reviewer sees fresh findings
           const r = await this.absorbUpload(s, inbound);
+          const c = await this.ctx.store.cases.get(s.caseId!);
+          if (c && c.status === 'NEEDS_INFO' && c.run?.state !== 'running' && c.run?.state !== 'queued') {
+            const seq = (c.run?.seq ?? 0) + 1;
+            await this.ctx.store.cases.update(c.id, (x) => {
+              x.run = { seq, state: 'queued' };
+            });
+            await this.queue.enqueuePipeline({ caseId: c.id, runSeq: seq, from: 'classify' });
+          }
           return [...r, say(t('S5_WAITING', l, { caseRef: s.caseRef ?? '' }))];
         }
         return [await this.statusReply(s)];

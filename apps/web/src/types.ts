@@ -19,10 +19,21 @@ export interface Case {
   reviews: Review[]; needsReviewFields: string[]; injectionSuspected: boolean; usage: { tokens: number; budget: number; calls: number }; policyVersion?: number; modelVersion?: string; promptVersion?: string;
   run?: { seq: number; state: string; error?: string; startedAt?: string; finishedAt?: string };
   uaepass?: UaePassCase;
+  botIntake?: BotIntake;
   completion?: { merchantId: string; sqlCaseId: string; sqlWrittenAt: string; tokenId: string; tokenExpiresAt: string; completedBy: string };
 }
 export interface Trace { id: string; agent: string; step: string; status: string; startedAt: string; durationMs: number; model?: string; promptVersion?: string; tokensIn?: number; tokensOut?: number; output?: Json; summary?: string; toolCalls?: { name: string; input: Json; resultSummary?: string }[]; error?: string; runSeq: number }
 export interface Webhook { id: string; status: string; attempts: number; lastStatusCode?: number; lastError?: string; url: string; createdAt: string; updatedAt: string; payloadRedacted: Record<string, unknown> }
+export interface BotIntake {
+  sessionId: string; channel: 'whatsapp' | 'telegram' | 'web'; lang: 'en' | 'ar';
+  answers: Record<string, unknown> & { contactName?: string; companyName?: string; entityChoice?: string; entityType?: string; emirate?: string; freeZone?: string; description?: string; category?: string; channel?: string; customerType?: string; billing?: string; customerLocation?: string; volumeBand?: string; ticketBand?: string; currentGateway?: string; switchReason?: string; yearsBand?: string; web?: string; noWebPresence?: boolean; activityFlags?: string[]; consentAt?: string };
+  mcc: { primaryMcc: string; secondaryMccs: string[]; confidence: number; reason: string; tier: string; labelEn: string; labelAr: string; source: string } | null;
+  prescreen: { score: number; band: 'LIKELY' | 'REVIEW' | 'UNLIKELY'; signals: { code: string; points: number; note: string }[]; computedAt: string; policyVersion: number } | null;
+  pricing: { tier: string; volumeBand: string; cnp: { mdrPct: number; fixedFeeAed: number } | null; cp: { mdrPct: number; fixedFeeAed: number } | null; rangeUpliftPct: number | null; settlement: string; setupFeeAed: number; reserve: { pct: number; days: number } | null; custom: boolean } | null;
+  flags: { extraReview: boolean; extraReviewReason?: string };
+  submittedAt: string | null;
+  transcript: { at: string; from: 'merchant' | 'bot' | 'system'; step: string; text: string }[];
+}
 export interface CaseResponse { case: Case; traces: Trace[]; webhooks: Webhook[]; llmIsMock: boolean; policy: { version: number; confidenceThreshold: number; uboThresholdPct: number } }
 
 export const DOC_LABELS: Record<string, string> = {

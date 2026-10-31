@@ -12,8 +12,9 @@ import { caseRoutes, downloadRoute } from './routes/cases';
 import { onboardingRoutes } from './routes/onboarding';
 import { uaepassRoutes } from './integrations/uaepass/routes';
 import { errorHandler } from './routes/util';
+import type { WhatsAppAdapter } from './channels/whatsapp/adapter';
 
-export function createApp(ctx: Ctx, queue: JobQueue): Express {
+export function createApp(ctx: Ctx, queue: JobQueue, opts: { whatsapp?: WhatsAppAdapter } = {}): Express {
   const app = express();
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
@@ -33,6 +34,8 @@ export function createApp(ctx: Ctx, queue: JobQueue): Express {
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
   const origins = ctx.cfg.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean);
   app.use(cors({ origin: origins, credentials: true }));
+  // channel webhooks verify an HMAC over the raw body, so they are mounted before the JSON parser
+  if (opts.whatsapp) app.use('/api/v1', opts.whatsapp.router());
   app.use(express.json({ limit: '2mb' }));
   app.use(cookieParser());
 
