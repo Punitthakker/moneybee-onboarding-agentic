@@ -292,6 +292,8 @@ export interface BotSessionRec {
   prescreen?: Prescreen | null;
   pricing?: PricingQuote | null;
   extraReview?: { on: boolean; reason?: string };
+  /** partner or referral code from a deep link (Telegram /start payload, WhatsApp wa.me prefilled text) */
+  referral?: string;
   transcript: { at: string; from: 'merchant' | 'bot' | 'system'; step: BotStep; text: string }[];
   /** messages composed for events outside an inbound turn (underwriter decisions); adapters drain this */
   outbox: { id: string; at: string; text: string; template?: { name: string; params: string[] }; sentAt?: string }[];

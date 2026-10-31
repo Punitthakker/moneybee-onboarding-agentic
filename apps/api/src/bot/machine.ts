@@ -274,6 +274,7 @@ export class BotMachine {
     // global commands (not in S0_LANG where anything starts the flow)
     if (s.step !== 'S0_LANG' && inbound.type === 'text') {
       if (GLOBAL.human.test(txt)) return this.hold(s);
+      if (/^(continue|resume|متابعة|استمرار)$/i.test(txt)) return this.prompt(s);
       if (GLOBAL.help.test(txt)) return [say(this.faq(s, 'general')), ...(await this.prompt(s))];
       if (GLOBAL.status.test(txt) && s.caseId) return [await this.statusReply(s)];
       if (GLOBAL.back.test(txt) && s.prevStep && s.step.startsWith('S1')) {
@@ -292,6 +293,8 @@ export class BotMachine {
 
     switch (s.step) {
       case 'S0_LANG': {
+        const ref = /^(?:start|join|ref)\s+([\w-]{2,64})$/i.exec(txt)?.[1];
+        if (ref) s.referral = ref;
         const choice = pick(inbound, [{ id: 'en', label: 'English' }, { id: 'ar', label: 'العربية' }]);
         if (!choice && isArabic(txt)) s.lang = 'ar';
         else if (choice) s.lang = choice as Lang;
@@ -865,6 +868,7 @@ export class BotMachine {
         prescreen: s.prescreen ?? null,
         pricing: s.pricing ?? null,
         flags: { extraReview: !!s.extraReview?.on, extraReviewReason: s.extraReview?.reason },
+        referral: s.referral,
         submittedAt: submittedAt ?? x.botIntake?.submittedAt ?? null,
         transcript: s.transcript.slice(-200),
       };

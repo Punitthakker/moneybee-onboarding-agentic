@@ -45,5 +45,16 @@ S0 language + consent -> S1 profile Q&A -> MCC (S2 restricted warning / prohibit
 
 Decision taken: the adapter runs inside the API process (`apps/api/src/channels/whatsapp`) rather than as a separate `apps/channels/whatsapp` service. It needs the store, cipher, LLM budget and queue, and a second process would have meant an internal HTTP API for all of that before there is a second channel. The module has no imports from the routes layer, so it can be lifted out later.
 
-## Next (Deliverable 5)
-Telegram Bot API adapter on the same `Inbound`/`Reply` contract.
+## Telegram adapter (Deliverable 5)
+| path | what |
+|---|---|
+| `apps/api/src/channels/telegram/client.ts` | Bot API client (sendMessage with inline keyboards, editMessageReplyMarkup, answerCallbackQuery, getFile download, setWebhook) and the in-memory mock. |
+| `apps/api/src/channels/telegram/adapter.ts` | webhook secret check, update to `Inbound` (text, callback_query, document, photo), `/start <code>` deep links to `session.referral`, per-chat ordering, update_id dedupe, outbox drain (always plain text), nudge sweep. Groups ignored. |
+| `apps/api/src/channels/telegram/index.ts` | builds from `TELEGRAM_MODE` (off / mock / live), registers the webhook on boot in live mode, chains `ctx.onBotOutbox`. |
+| `scripts/tg-sim.mjs` | terminal simulator (`npm run tg:sim`). |
+| `docs/bot/06-telegram-runbook.md` | BotFather setup, webhook, deep links, differences from WhatsApp. |
+
+Both adapters share `BotMachine`; a decision made in the back office reaches the merchant on whichever channel they used.
+
+## Next (Deliverable 6)
+Threat model update for chat channels, `/stats` funnel per stage and channel, Playwright e2e driving a fake WhatsApp conversation through the real stack.

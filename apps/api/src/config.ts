@@ -72,6 +72,14 @@ const EnvSchema = z.object({
   /** approved template language codes */
   WHATSAPP_TEMPLATE_LANG_EN: z.string().default('en'),
   WHATSAPP_TEMPLATE_LANG_AR: z.string().default('ar'),
+  /** off: no Telegram routes. mock: webhook mounted, outbound recorded. live: Telegram Bot API. */
+  TELEGRAM_MODE: z.enum(['off', 'mock', 'live']).default('off'),
+  /** from BotFather */
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  /** random string; sent by Telegram in X-Telegram-Bot-Api-Secret-Token and set via setWebhook on boot */
+  TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
+  /** when set, the API registers PUBLIC_API_URL/api/v1/channels/telegram/webhook with Telegram on boot */
+  TELEGRAM_SET_WEBHOOK_ON_BOOT: bool(true),
   /** seconds between outbox/nudge sweeps */
   BOT_TICK_SECONDS: z.coerce.number().int().positive().default(60),
   /** mock: built-in simulator, no credentials. live: real UAE PASS (needs onboarding with the UAE PASS team). */

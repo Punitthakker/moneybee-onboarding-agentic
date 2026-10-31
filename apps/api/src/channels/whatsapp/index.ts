@@ -35,7 +35,11 @@ export function createWhatsAppAdapter(ctx: Ctx, queue: JobQueue): { adapter: Wha
     (['sendText', 'sendButtons', 'sendList', 'sendTemplate'] as const).forEach(wrap);
   }
   const adapter = new WhatsAppAdapter(ctx, queue, { verifyToken, appSecret, client, mock, templateLang: { en: cfg.WHATSAPP_TEMPLATE_LANG_EN, ar: cfg.WHATSAPP_TEMPLATE_LANG_AR } });
-  ctx.onBotOutbox = (sessionId) => adapter.drainOutbox(sessionId).then(() => undefined);
+  const prev = ctx.onBotOutbox;
+  ctx.onBotOutbox = async (sessionId) => {
+    await prev?.(sessionId);
+    await adapter.drainOutbox(sessionId);
+  };
   const timer = setInterval(() => void adapter.tick().catch((e) => ctx.log.warn(`bot tick failed: ${e instanceof Error ? e.message : e}`)), cfg.BOT_TICK_SECONDS * 1000);
   timer.unref();
   return { adapter, client, stop: () => clearInterval(timer) };

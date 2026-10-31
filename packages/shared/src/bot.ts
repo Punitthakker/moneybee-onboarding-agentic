@@ -162,6 +162,7 @@ export const BotIntakeSchema = z.object({
   prescreen: PrescreenSchema.nullable(),
   pricing: PricingQuoteSchema.nullable(),
   flags: z.object({ extraReview: z.boolean().default(false), extraReviewReason: z.string().optional() }).default({}),
+  referral: z.string().optional(),
   submittedAt: z.string().nullable(),
   /** redacted transcript: role, step, text with PII masked */
   transcript: z.array(z.object({ at: z.string(), from: z.enum(['merchant', 'bot', 'system']), step: BotStepSchema, text: z.string() })).default([]),
